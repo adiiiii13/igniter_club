@@ -4,9 +4,14 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "prebuild": "node scripts/sync-parallax.mjs",
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "frames:webp:2k": "powershell -ExecutionPolicy Bypass -File scripts/generate-webp-frames.ps1 -Input input.mp4 -OutputDir public/frames_hd -Width 2560 -Height 1440 -Fps 24 -Quality 92",
+    "frames:webp:hd": "powershell -ExecutionPolicy Bypass -File scripts/generate-webp-frames.ps1 -Input input.mp4 -OutputDir public/frames_hd -Width 1920 -Height 1080 -Fps 24 -Quality 92",
+    "frames:jpg:2k": "ffmpeg -y -i input.mp4 -vf \"fps=24,scale=2560:1440:flags=lanczos\" -q:v 2 public/frames_hd/ezgif-frame-%03d.jpg",
+    "frames:jpg:hd": "ffmpeg -y -i input.mp4 -vf \"fps=24,scale=1920:1080:flags=lanczos\" -q:v 2 public/frames_hd/ezgif-frame-%03d.jpg"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
@@ -14,6 +19,7 @@
     "framer-motion": "^11.18.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-icons": "^5.6.0",
     "react-router-dom": "^7.14.0",
     "three": "^0.183.2"
   },

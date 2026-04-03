@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react';
 import { motion, useInView } from 'framer-motion';
+import { FiSend, FiCheck } from 'react-icons/fi';
+import AnimatedIcon from './AnimatedIcon';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 40 },
@@ -57,15 +59,21 @@ export default function JoinSection() {
                 whileHover={{ rotate: 12, scale: 1.1 }}
                 transition={{ type: 'spring', stiffness: 300 }}
               >
-                🔥
+                <AnimatedIcon>
+                  <FiSend size={32} className="text-white" />
+                </AnimatedIcon>
               </motion.div>
               <h2 className="font-outfit font-bold text-3xl sm:text-4xl md:text-5xl text-white mb-4">
-                Ready to <span className="text-gradient">Ignite</span>?
+                Be The <span className="text-gradient">Next Chapter</span>
               </h2>
-              <p className="font-inter text-dark-300 max-w-lg mx-auto leading-relaxed">
-                Join a community of 200+ passionate tech enthusiasts. No experience required —
-                just bring your curiosity and we'll bring the fire.
-              </p>
+              <motion.p
+                className="font-inter text-dark-300 max-w-lg mx-auto leading-relaxed"
+                initial={{ opacity: 0, y: 20 }}
+                animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+                transition={{ duration: 0.7, delay: 0.25 }}
+              >
+                Every strong story needs new voices. Bring your curiosity, your ideas, and your ambition. We will build the next chapter together.
+              </motion.p>
             </div>
 
             {/* Form */}
@@ -123,9 +131,13 @@ export default function JoinSection() {
                   />
                 </div>
 
-                <button type="submit" className="btn-ignite w-full text-base mt-2">
-                  <span className="mr-2">🚀</span>
-                  Join Igniter Club
+                <button type="submit" className="btn-ignite w-full px-8 py-4 text-base mt-2">
+                  <span className="btn-roll" aria-hidden="true">
+                    <span className="btn-roll-track">
+                      <span className="btn-roll-text">Join Igniter Club →</span>
+                      <span className="btn-roll-text clone">Join Igniter Club →</span>
+                    </span>
+                  </span>
                 </button>
 
                 <p className="text-center text-xs font-inter text-dark-600 mt-3">
@@ -139,12 +151,16 @@ export default function JoinSection() {
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 20 }}
               >
-                <div className="text-6xl mb-4">🎉</div>
+                <div className="mb-6 flex justify-center">
+                  <AnimatedIcon className="w-20 h-20">
+                    <FiCheck size={80} className="text-ignite-400" />
+                  </AnimatedIcon>
+                </div>
                 <h3 className="font-outfit font-bold text-2xl text-white mb-2">
-                  Welcome to the Club!
+                  Welcome To The Story!
                 </h3>
                 <p className="font-inter text-dark-300">
-                  Check your inbox — we'll send you the next steps.
+                  Check your inbox. Your first chapter with Igniter starts now.
                 </p>
               </motion.div>
             )}

@@ -1,5 +1,7 @@
 import { useRef } from 'react';
 import { motion, useInView } from 'framer-motion';
+import { FiUsers, FiTarget, FiTool, FiAward } from 'react-icons/fi';
+import AnimatedIcon from './AnimatedIcon';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 40 },
@@ -19,10 +21,10 @@ export default function AboutSection() {
   const isInView = useInView(ref, { once: true, margin: '-100px' });
 
   const stats = [
-    { value: '200+', label: 'Active Members', icon: '👥' },
-    { value: '25+', label: 'Events Hosted', icon: '🎯' },
-    { value: '10+', label: 'Workshops', icon: '🛠️' },
-    { value: '5+', label: 'Hackathons Won', icon: '🏆' },
+    { value: '200+', label: 'Characters In The Story', icon: FiUsers },
+    { value: '25+', label: 'Story Moments Hosted', icon: FiTarget },
+    { value: '10+', label: 'Skill Arcs Unlocked', icon: FiTool },
+    { value: '5+', label: 'Winning Chapters', icon: FiAward },
   ];
 
   return (
@@ -45,10 +47,10 @@ export default function AboutSection() {
           custom={0}
         >
           <span className="inline-block font-inter text-xs tracking-[0.3em] uppercase text-ignite-400 mb-4">
-            Who We Are
+            Chapter One
           </span>
           <h2 className="font-outfit font-bold text-4xl sm:text-5xl md:text-6xl text-white mb-6">
-            About <span className="text-gradient">Igniter Club</span>
+            Where The Story <span className="text-gradient">Began</span>
           </h2>
           <div className="section-divider mx-auto" />
         </motion.div>
@@ -64,24 +66,31 @@ export default function AboutSection() {
           >
             <div className="glass rounded-2xl p-8 sm:p-10">
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-ignite-500 to-ignite-700 flex items-center justify-center text-lg">
-                  🔥
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-ignite-500 to-ignite-700 flex items-center justify-center">
+                  <AnimatedIcon>
+                    <FiTool size={20} className="text-white" />
+                  </AnimatedIcon>
                 </div>
                 <h3 className="font-outfit font-semibold text-xl text-white">
-                  Our Mission
+                  The Origin
                 </h3>
               </div>
-              <p className="font-inter text-dark-300 leading-relaxed mb-6">
-                Igniter Club is GMIT's premier technology community, dedicated to
-                <span className="text-ignite-300 font-medium"> igniting innovation</span> and
-                empowering students to become the tech leaders of tomorrow. We bridge the gap
-                between classroom learning and real-world application.
-              </p>
-              <p className="font-inter text-dark-300 leading-relaxed mb-6">
-                Through immersive workshops, competitive hackathons, and collaborative projects,
-                we foster an environment where creativity meets code. Whether you're a seasoned
-                developer or just starting out — there's a place for you here.
-              </p>
+              <motion.p 
+                className="font-inter text-dark-300 leading-relaxed mb-6"
+                initial={{ opacity: 0, y: 20 }}
+                animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+                transition={{ duration: 0.7, delay: 0.25 }}
+              >
+                Igniter Club started as a late-evening conversation between students who wanted to build more than assignments. That single spark became a campus-wide community focused on real projects, real impact.
+              </motion.p>
+              <motion.p 
+                className="font-inter text-dark-300 leading-relaxed mb-6"
+                initial={{ opacity: 0, y: 20 }}
+                animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+                transition={{ duration: 0.7, delay: 0.35 }}
+              >
+                Today, every workshop, hackathon, and open build night adds another chapter to our story. Beginners find confidence, makers find collaborators, and teams turn ideas into things people can actually use.
+              </motion.p>
               <div className="flex flex-wrap gap-3">
                 {['AI/ML', 'Web Dev', 'Cybersecurity', 'Cloud', 'Open Source'].map((tag) => (
                   <span
@@ -111,7 +120,9 @@ export default function AboutSection() {
                 transition={{ type: 'spring', stiffness: 300, damping: 20 }}
               >
                 <span className="text-3xl mb-3 block group-hover:scale-110 transition-transform duration-300">
-                  {stat.icon}
+                  <AnimatedIcon className="w-10 h-10">
+                    <stat.icon size={32} className="text-ignite-400" />
+                  </AnimatedIcon>
                 </span>
                 <span className="block font-outfit font-bold text-3xl sm:text-4xl text-gradient mb-1">
                   {stat.value}

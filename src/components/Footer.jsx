@@ -3,9 +3,9 @@ export default function Footer() {
 
   const links = {
     Club: [
-      { label: 'About Us', href: '#about' },
-      { label: 'Events', href: '#events' },
-      { label: 'Join Now', href: '#join' },
+      { label: 'About Us', href: '/about' },
+      { label: 'Events', href: '/events' },
+      { label: 'Join Now', href: '/join' },
     ],
     Connect: [
       { label: 'Instagram', href: '#' },
@@ -39,7 +39,7 @@ export default function Footer() {
                   key={platform}
                   href="#"
                   aria-label={platform}
-                  className="w-9 h-9 rounded-lg bg-dark-800/60 border border-white/5 flex items-center justify-center text-dark-400 hover:text-ignite-400 hover:border-ignite-500/30 transition-all duration-300"
+                  className="btn-ignite w-9 h-9 p-0"
                 >
                   {platform === 'Instagram' && (
                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">

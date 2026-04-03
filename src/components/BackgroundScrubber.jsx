@@ -1,10 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-
-const TOTAL_FRAMES = 192;
-const getFramePath = (index) => {
-  const padded = String(index + 1).padStart(3, '0');
-  return `/frames/ezgif-frame-${padded}.jpg`;
-};
+import { preloadAllFrames, TOTAL_FRAMES } from '../utils/framePreload';
 
 export default function BackgroundScrubber() {
   const canvasRef = useRef(null);
@@ -15,26 +10,23 @@ export default function BackgroundScrubber() {
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    let loadedCount = 0;
-    const images = [];
+    let isMounted = true;
 
-    for (let i = 0; i < TOTAL_FRAMES; i++) {
-      const img = new Image();
-      img.src = getFramePath(i);
-      img.onload = () => {
-        loadedCount++;
-        setLoadProgress(Math.round((loadedCount / TOTAL_FRAMES) * 100));
-        if (loadedCount === TOTAL_FRAMES) {
-          setIsLoaded(true);
-          drawFrame(0);
-        }
-      };
-      images[i] = img;
-    }
+    const loadAllFrames = async () => {
+      const images = await preloadAllFrames((progress) => {
+        if (isMounted) setLoadProgress(progress);
+      });
 
-    imagesRef.current = images;
+      if (!isMounted) return;
+      imagesRef.current = images;
+      setIsLoaded(true);
+      drawFrame(0);
+    };
+
+    loadAllFrames();
 
     return () => {
+      isMounted = false;
       imagesRef.current = [];
     };
   }, []);
@@ -47,15 +39,15 @@ export default function BackgroundScrubber() {
     const img = imagesRef.current[frameIndex];
     if (!img || !img.complete) return;
 
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const w = window.innerWidth;
     const h = window.innerHeight;
 
-    canvas.width = w * dpr;
-    canvas.height = h * dpr;
+    canvas.width = Math.floor(w * dpr);
+    canvas.height = Math.floor(h * dpr);
     canvas.style.width = `${w}px`;
     canvas.style.height = `${h}px`;
-    ctx.scale(dpr, dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
@@ -78,6 +70,7 @@ export default function BackgroundScrubber() {
     }
 
     ctx.clearRect(0, 0, w, h);
+    ctx.filter = 'none';
     ctx.drawImage(img, offsetX, offsetY, drawW, drawH);
   }, []);
 
@@ -125,13 +118,14 @@ export default function BackgroundScrubber() {
         className="absolute inset-0 w-full h-full"
         style={{ 
           objectFit: 'cover',
-          filter: 'contrast(1.3) saturate(1.4) brightness(1.2)' 
+          filter: 'none',
+          imageRendering: 'auto'
         }}
       />
 
       {/* Dark gradient overlay for text contrast across the whole page */}
       {/* Lightened slightly to let the enhanced Mario fully pop through */}
-      <div className="absolute inset-0 bg-gradient-to-b from-dark-950/40 via-dark-950/60 to-dark-950/80 z-10" />
+      <div className="absolute inset-0 bg-gradient-to-b from-dark-950/25 via-dark-950/45 to-dark-950/65 z-10" />
 
       {/* Loading indicator */}
       {!isLoaded && (

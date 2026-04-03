@@ -1,5 +1,7 @@
 import { useRef } from 'react';
 import { motion, useInView } from 'framer-motion';
+import { FiZap, FiCpu, FiCloud, FiGlobe, FiShield, FiMic } from 'react-icons/fi';
+import AnimatedIcon from './AnimatedIcon';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 40 },
@@ -21,7 +23,7 @@ const events = [
     type: 'Hackathon',
     description:
       '24-hour hackathon where teams compete to build innovative solutions. Cash prizes, mentors from top companies, and free swag!',
-    icon: '⚡',
+    icon: FiZap,
     color: 'from-ignite-500 to-rose-600',
     badge: 'Featured',
   },
@@ -31,7 +33,7 @@ const events = [
     type: 'Workshop',
     description:
       'Hands-on deep dive into building production-ready AI applications with Large Language Models and modern ML frameworks.',
-    icon: '🧠',
+    icon: FiCpu,
     color: 'from-violet-500 to-purple-600',
     badge: 'New',
   },
@@ -41,7 +43,7 @@ const events = [
     type: 'Workshop',
     description:
       'Learn to deploy containerized applications to the cloud using Docker, Kubernetes, and CI/CD pipelines from scratch.',
-    icon: '☁️',
+    icon: FiCloud,
     color: 'from-cyan-500 to-blue-600',
     badge: null,
   },
@@ -51,7 +53,7 @@ const events = [
     type: 'Sprint',
     description:
       'Contribute to real open-source projects with guidance from experienced maintainers. Perfect for building your GitHub profile!',
-    icon: '🌐',
+    icon: FiGlobe,
     color: 'from-emerald-500 to-teal-600',
     badge: null,
   },
@@ -61,7 +63,7 @@ const events = [
     type: 'Competition',
     description:
       'Capture-the-flag cybersecurity competition testing web, binary, and crypto skills. Compete solo or in teams of three.',
-    icon: '🛡️',
+    icon: FiShield,
     color: 'from-amber-500 to-orange-600',
     badge: 'Popular',
   },
@@ -71,7 +73,7 @@ const events = [
     type: 'Talk',
     description:
       'Industry speakers share insights on WebAssembly, edge computing, and the next generation of web technologies.',
-    icon: '🎙️',
+    icon: FiMic,
     color: 'from-pink-500 to-rose-600',
     badge: null,
   },
@@ -101,10 +103,10 @@ export default function EventsSection() {
           custom={0}
         >
           <span className="inline-block font-inter text-xs tracking-[0.3em] uppercase text-ignite-400 mb-4">
-            What's Coming Up
+            Chapter Two And Beyond
           </span>
           <h2 className="font-outfit font-bold text-4xl sm:text-5xl md:text-6xl text-white mb-6">
-            Upcoming <span className="text-gradient">Events</span>
+            The Next <span className="text-gradient">Story Beats</span>
           </h2>
           <div className="section-divider mx-auto" />
         </motion.div>
@@ -131,7 +133,9 @@ export default function EventsSection() {
                   {/* Top row: icon + badge */}
                   <div className="flex items-start justify-between mb-4">
                     <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${event.color} flex items-center justify-center text-xl shadow-lg`}>
-                      {event.icon}
+                      <AnimatedIcon>
+                        <event.icon size={24} className="text-white" />
+                      </AnimatedIcon>
                     </div>
                     {event.badge && (
                       <span className="px-3 py-1 rounded-full text-[10px] font-inter font-bold uppercase tracking-wider text-ignite-300 bg-ignite-500/15 border border-ignite-500/25">
@@ -164,7 +168,7 @@ export default function EventsSection() {
                   {/* Footer link */}
                   <div className="mt-5 pt-4 border-t border-white/5">
                     <span className="inline-flex items-center text-sm font-inter font-medium text-ignite-400 group-hover:text-ignite-300 transition-colors">
-                      Learn more
+                      Read this chapter
                       <svg
                         className="ml-1.5 w-4 h-4 group-hover:translate-x-1 transition-transform duration-300"
                         fill="none"

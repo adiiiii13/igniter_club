@@ -1,11 +1,11 @@
+import { useEffect } from 'react';
+
+const PARALLAX_LANDING_PATH = '/welcome';
+
 export default function IntroPage() {
-  return (
-    <div style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
-      <iframe 
-        src="/intro/index.html" 
-        style={{ width: '100%', height: '100%', border: 'none' }}
-        title="Parallax Welcome Intro"
-      />
-    </div>
-  );
+  useEffect(() => {
+    window.location.replace(PARALLAX_LANDING_PATH);
+  }, []);
+
+  return null;
 }

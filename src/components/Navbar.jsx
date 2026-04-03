@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
 
+const HOME_REDIRECT_PATH = '/welcome';
+
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -29,11 +31,17 @@ export default function Navbar() {
   }, [location]);
 
   const navLinks = [
-    { label: 'About', href: '/home#about' },
-    { label: 'Events', href: '/home#events' },
+    { label: 'Home', href: HOME_REDIRECT_PATH },
+    { label: 'About', href: '/about' },
+    { label: 'Events', href: '/events' },
     { label: 'Communities', href: '/communities' },
-    { label: 'Bikini Special', href: '/bikini-special' },
   ];
+
+  const handleHomeNavigation = (e, closeMobile = false) => {
+    e.preventDefault();
+    if (closeMobile) setMobileOpen(false);
+    window.location.assign(HOME_REDIRECT_PATH);
+  };
 
   return (
     <>
@@ -49,7 +57,7 @@ export default function Navbar() {
       >
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
           {/* Logo */}
-          <Link to="/home" className="flex items-center gap-2.5 group">
+          <Link to="/home" onClick={(e) => handleHomeNavigation(e)} className="flex items-center gap-2.5 group">
             <span className="text-xl group-hover:scale-110 transition-transform duration-300">🔥</span>
             <span className="font-outfit font-bold text-lg text-white">
               Igniter<span className="text-ignite-400 ml-0.5">Club</span>
@@ -62,23 +70,34 @@ export default function Navbar() {
               <Link
                 key={link.label}
                 to={link.href}
-                className="px-4 py-2 rounded-lg font-inter text-sm font-medium text-dark-300 hover:text-white hover:bg-white/5 transition-all duration-300"
+                onClick={link.label === 'Home' ? (e) => handleHomeNavigation(e) : undefined}
+                className="btn-header px-4 py-2 text-sm"
               >
-                {link.label}
+                <span className="btn-roll" aria-hidden="true">
+                  <span className="btn-roll-track">
+                    <span className="btn-roll-text">{link.label}</span>
+                    <span className="btn-roll-text clone">{link.label}</span>
+                  </span>
+                </span>
               </Link>
             ))}
             <Link
-              to="/home#join"
-              className="ml-3 px-5 py-2.5 rounded-xl font-outfit font-semibold text-sm text-white bg-gradient-to-r from-ignite-600 to-ignite-500 hover:from-ignite-500 hover:to-ignite-400 shadow-md shadow-ignite-500/20 hover:shadow-lg hover:shadow-ignite-500/30 transition-all duration-300"
+              to="/join"
+              className="btn-header-primary ml-3 px-5 py-2.5 text-sm"
             >
-              Join Now
+              <span className="btn-roll" aria-hidden="true">
+                <span className="btn-roll-track">
+                  <span className="btn-roll-text">Join Now</span>
+                  <span className="btn-roll-text clone">Join Now</span>
+                </span>
+              </span>
             </Link>
           </div>
 
           {/* Mobile hamburger */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="sm:hidden w-10 h-10 rounded-lg flex flex-col items-center justify-center gap-1.5 hover:bg-white/5 transition-colors"
+            className="btn-header sm:hidden w-10 h-10 p-0 flex flex-col items-center justify-center gap-1.5"
             aria-label="Toggle navigation menu"
           >
             <motion.span
@@ -115,18 +134,28 @@ export default function Navbar() {
                 <Link
                   key={link.label}
                   to={link.href}
-                  onClick={() => setMobileOpen(false)}
-                  className="px-4 py-3 rounded-xl font-inter text-sm font-medium text-dark-300 hover:text-white hover:bg-white/5 transition-all duration-300"
+                  onClick={link.label === 'Home' ? (e) => handleHomeNavigation(e, true) : () => setMobileOpen(false)}
+                  className="btn-header px-4 py-3 text-sm"
                 >
-                  {link.label}
+                  <span className="btn-roll" aria-hidden="true">
+                    <span className="btn-roll-track">
+                      <span className="btn-roll-text">{link.label}</span>
+                      <span className="btn-roll-text clone">{link.label}</span>
+                    </span>
+                  </span>
                 </Link>
               ))}
               <Link
-                to="/home#join"
+                to="/join"
                 onClick={() => setMobileOpen(false)}
-                className="mt-2 px-5 py-3 rounded-xl font-outfit font-semibold text-sm text-white text-center bg-gradient-to-r from-ignite-600 to-ignite-500 shadow-md shadow-ignite-500/20"
+                className="btn-header-primary mt-2 px-5 py-3 text-sm text-center"
               >
-                Join Now
+                <span className="btn-roll" aria-hidden="true">
+                  <span className="btn-roll-track">
+                    <span className="btn-roll-text">Join Now</span>
+                    <span className="btn-roll-text clone">Join Now</span>
+                  </span>
+                </span>
               </Link>
             </div>
           </motion.div>
