@@ -20,13 +20,6 @@ export default function AboutSection() {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '-100px' });
 
-  const stats = [
-    { value: '200+', label: 'Characters In The Story', icon: FiUsers },
-    { value: '25+', label: 'Story Moments Hosted', icon: FiTarget },
-    { value: '10+', label: 'Skill Arcs Unlocked', icon: FiTool },
-    { value: '5+', label: 'Winning Chapters', icon: FiAward },
-  ];
-
   return (
     <section
       id="about"
@@ -55,10 +48,11 @@ export default function AboutSection() {
           <div className="section-divider mx-auto" />
         </motion.div>
 
-        {/* Content grid */}
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+        {/* Content */}
+        <div className="flex justify-center">
           {/* Text content */}
           <motion.div
+            className="w-full max-w-3xl"
             variants={fadeUp}
             initial="hidden"
             animate={isInView ? 'visible' : 'hidden'}
@@ -81,7 +75,7 @@ export default function AboutSection() {
                 animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
                 transition={{ duration: 0.7, delay: 0.25 }}
               >
-                Igniter Club started as a late-evening conversation between students who wanted to build more than assignments. That single spark became a campus-wide community focused on real projects, real impact.
+                The idea of building a student-led tech community started taking shape in 2024 through planning, pitching, and learning what it takes to run a club from scratch. That early effort became Codecaffeine, our campus's first tech club built from the ground up.
               </motion.p>
               <motion.p 
                 className="font-inter text-dark-300 leading-relaxed mb-6"
@@ -89,10 +83,10 @@ export default function AboutSection() {
                 animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
                 transition={{ duration: 0.7, delay: 0.35 }}
               >
-                Today, every workshop, hackathon, and open build night adds another chapter to our story. Beginners find confidence, makers find collaborators, and teams turn ideas into things people can actually use.
+                Like many ambitious first attempts, it faced challenges, but the drive returned in March 2026 with selection into Unstop's Igniter program. Today, with stronger institutional backing, the club has relaunched with renewed momentum, turning a past setback into a sustainable comeback.
               </motion.p>
               <div className="flex flex-wrap gap-3">
-                {['AI/ML', 'Web Dev', 'Cybersecurity', 'Cloud', 'Open Source'].map((tag) => (
+                {['Community Built', 'Resilience', 'Unstop Igniter', 'Comeback', 'Momentum'].map((tag) => (
                   <span
                     key={tag}
                     className="px-3 py-1 rounded-full text-xs font-inter font-medium text-ignite-300 bg-ignite-500/10 border border-ignite-500/20"
@@ -102,36 +96,6 @@ export default function AboutSection() {
                 ))}
               </div>
             </div>
-          </motion.div>
-
-          {/* Stats grid */}
-          <motion.div
-            className="grid grid-cols-2 gap-4"
-            variants={fadeUp}
-            initial="hidden"
-            animate={isInView ? 'visible' : 'hidden'}
-            custom={0.3}
-          >
-            {stats.map((stat, index) => (
-              <motion.div
-                key={stat.label}
-                className="glass rounded-2xl p-6 sm:p-8 text-center group hover:border-ignite-500/30 transition-smooth"
-                whileHover={{ y: -4, scale: 1.02 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-              >
-                <span className="text-3xl mb-3 block group-hover:scale-110 transition-transform duration-300">
-                  <AnimatedIcon className="w-10 h-10">
-                    <stat.icon size={32} className="text-ignite-400" />
-                  </AnimatedIcon>
-                </span>
-                <span className="block font-outfit font-bold text-3xl sm:text-4xl text-gradient mb-1">
-                  {stat.value}
-                </span>
-                <span className="font-inter text-sm text-dark-400">
-                  {stat.label}
-                </span>
-              </motion.div>
-            ))}
           </motion.div>
         </div>
       </div>

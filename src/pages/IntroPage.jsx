@@ -1,11 +1,5 @@
-import { useEffect } from 'react';
-
-const PARALLAX_LANDING_PATH = '/welcome';
+import { Navigate } from 'react-router-dom';
 
 export default function IntroPage() {
-  useEffect(() => {
-    window.location.replace(PARALLAX_LANDING_PATH);
-  }, []);
-
-  return null;
+  return <Navigate to="/home" replace />;
 }

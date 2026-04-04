@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+
 export default function Footer() {
   const currentYear = new Date().getFullYear();
 
@@ -19,18 +21,21 @@ export default function Footer() {
   };
 
   return (
-    <footer className="relative border-t border-white/5">
+    <footer className="relative border-t border-white/5 bg-dark-950/80 backdrop-blur-xl">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10">
           {/* Brand */}
           <div className="lg:col-span-1">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-2xl">🔥</span>
-              <span className="font-outfit font-bold text-xl text-white">
-                Igniter <span className="text-ignite-400">Club</span>
-              </span>
+            <div className="flex items-center mb-6">
+              <Link to="/home" className="brand-logo-shell brand-logo-footer" aria-label="Go to home">
+                <img 
+                  src="/GMITxIgnite-removebg-preview.png" 
+                  alt="Igniter Club x GMIT Logo" 
+                  className="brand-logo-img"
+                />
+              </Link>
             </div>
-            <p className="font-inter text-sm text-dark-500 leading-relaxed mb-6">
+            <p className="font-inter text-sm text-dark-300 leading-relaxed mb-8 max-w-sm">
               GMIT's premier tech community. Building, breaking, and innovating — together.
             </p>
             <div className="flex gap-3">
@@ -39,7 +44,7 @@ export default function Footer() {
                   key={platform}
                   href="#"
                   aria-label={platform}
-                  className="btn-ignite w-9 h-9 p-0"
+                  className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-dark-400 hover:bg-ignite-500/20 hover:border-ignite-500/40 hover:text-ignite-300 transition-all duration-300 hover:-translate-y-1 shadow-lg"
                 >
                   {platform === 'Instagram' && (
                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -72,7 +77,7 @@ export default function Footer() {
                   <li key={link.label}>
                     <a
                       href={link.href}
-                      className="font-inter text-sm text-dark-400 hover:text-ignite-400 transition-colors duration-300"
+                      className="font-inter text-sm text-dark-400 hover:text-ignite-300 hover:translate-x-1 inline-block transition-all duration-300"
                     >
                       {link.label}
                     </a>
@@ -83,13 +88,12 @@ export default function Footer() {
           ))}
         </div>
 
-        {/* Bottom bar */}
-        <div className="mt-14 pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="font-inter text-xs text-dark-600">
+        <div className="mt-16 pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="font-inter text-xs text-dark-400">
             © {currentYear} Igniter Club × GMIT. All rights reserved.
           </p>
-          <p className="font-inter text-xs text-dark-700">
-            Crafted with 🔥 by Igniter Club Dev Team
+          <p className="font-inter text-xs text-dark-500 flex items-center gap-1.5">
+            Crafted with <span className="text-ignite-500">🔥</span> by Igniter Club Dev Team
           </p>
         </div>
       </div>

@@ -39,7 +39,7 @@ export default function BackgroundScrubber() {
     const img = imagesRef.current[frameIndex];
     if (!img || !img.complete) return;
 
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
     const w = window.innerWidth;
     const h = window.innerHeight;
 
@@ -55,19 +55,19 @@ export default function BackgroundScrubber() {
     const imgAspect = img.naturalWidth / img.naturalHeight;
     const canvasAspect = w / h;
 
+    const scaleFactor = 1.15; // Zoom in to hide watermark natively
     let drawW, drawH, offsetX, offsetY;
 
     if (canvasAspect > imgAspect) {
-      drawW = w;
-      drawH = w / imgAspect;
-      offsetX = 0;
-      offsetY = (h - drawH) / 2;
+      drawW = w * scaleFactor;
+      drawH = (w / imgAspect) * scaleFactor;
     } else {
-      drawH = h;
-      drawW = h * imgAspect;
-      offsetX = (w - drawW) / 2;
-      offsetY = 0;
+      drawH = h * scaleFactor;
+      drawW = (h * imgAspect) * scaleFactor;
     }
+
+    offsetX = (w - drawW) / 2;
+    offsetY = (h - drawH) / 2;
 
     ctx.clearRect(0, 0, w, h);
     ctx.filter = 'none';

@@ -1,6 +1,8 @@
 import { motion } from 'framer-motion';
 
-export default function HeroSection() {
+import { Link } from 'react-router-dom';
+
+export default function HeroSection({ onAuthClick, isLoggedIn }) {
   return (
     <section
       id="hero"
@@ -71,20 +73,48 @@ export default function HeroSection() {
               </span>
             </span>
           </a>
-          <a
-            href="#join"
-            className="btn-ignite px-8 py-4 text-base"
-          >
-            <span className="btn-roll" aria-hidden="true">
-              <span className="btn-roll-track">
-                <span className="btn-roll-text">✍️ Be In The Next Chapter</span>
-                <span className="btn-roll-text clone">✍️ Be In The Next Chapter</span>
+          {!isLoggedIn ? (
+            <>
+              <a
+                href="#join"
+                className="btn-ignite px-8 py-4 text-base"
+              >
+                <span className="btn-roll" aria-hidden="true">
+                  <span className="btn-roll-track">
+                    <span className="btn-roll-text">✍️ Be In The Next Chapter</span>
+                    <span className="btn-roll-text clone">✍️ Be In The Next Chapter</span>
+                  </span>
+                </span>
+                <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </a>
+              <button
+                type="button"
+                onClick={onAuthClick}
+                className="btn-header-primary px-8 py-4 text-base"
+              >
+                <span className="btn-roll" aria-hidden="true">
+                  <span className="btn-roll-track">
+                    <span className="btn-roll-text">Join The Club</span>
+                    <span className="btn-roll-text clone">Join The Club</span>
+                  </span>
+                </span>
+              </button>
+            </>
+          ) : (
+            <Link
+              to="/student/home"
+              className="btn-header-primary px-8 py-4 text-base"
+            >
+              <span className="btn-roll" aria-hidden="true">
+                <span className="btn-roll-track">
+                  <span className="btn-roll-text">🚀 Go to Dashboard</span>
+                  <span className="btn-roll-text clone">🚀 Go to Dashboard</span>
+                </span>
               </span>
-            </span>
-            <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </a>
+            </Link>
+          )}
         </div>
 
       </div>

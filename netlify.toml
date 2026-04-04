@@ -4,13 +4,23 @@
 
 [[redirects]]
   from = "/"
-  to = "/welcome"
+  to = "/Parallax-website-main/"
   status = 302
 
 [[redirects]]
   from = "/welcome"
-  to = "/Parallax-website-main/index.html"
-  status = 200
+  to = "/Parallax-website-main/"
+  status = 302
+
+[[redirects]]
+  from = "/intro"
+  to = "/Parallax-website-main/"
+  status = 302
+
+[[redirects]]
+  from = "/intro/"
+  to = "/Parallax-website-main/"
+  status = 302
 
 [[redirects]]
   from = "/Parallax-website-main/*"
@@ -39,6 +49,16 @@
 
 [[redirects]]
   from = "/join"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/auth/*"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/student/*"
   to = "/index.html"
   status = 200
 

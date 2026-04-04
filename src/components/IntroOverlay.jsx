@@ -3,12 +3,62 @@ import { motion } from 'framer-motion';
 import { preloadAllFrames } from '../utils/framePreload';
 import AnimatedWordmarkIntro from './AnimatedWordmarkIntro';
 
-const INTRO_MIN_DURATION_MS = 1800;
-const OUTRO_DURATION_MS = 950;
+const INTRO_MIN_DURATION_MS = 3000;
+const OUTRO_DURATION_MS = 1300;
 
-export default function IntroOverlay({ onDone }) {
+const lineCharVariants = {
+  hidden: { opacity: 0, y: 24, filter: 'blur(4px)' },
+  visible: (i) => ({
+    opacity: 1,
+    y: 0,
+    filter: 'blur(0px)',
+    transition: {
+      duration: 0.52,
+      delay: 0.14 + i * 0.028,
+      ease: [0.25, 0.46, 0.45, 0.94],
+    },
+  }),
+  exiting: (custom) => {
+    const [i, total] = custom;
+    return {
+    opacity: 0,
+    y: -18,
+    filter: 'blur(3px)',
+    transition: {
+      duration: 0.36,
+      delay: (total - 1 - i) * 0.014,
+      ease: [0.55, 0.085, 0.68, 0.53],
+    },
+    };
+  },
+};
+
+function AnimatedTextLine({ text, className, isExiting, charClassName = '' }) {
+  const chars = Array.from(text || '');
+  const total = chars.length;
+
+  return (
+    <p className={className}>
+      {chars.map((char, index) => (
+        <motion.span
+          key={`${char}-${index}`}
+          className={`inline-block ${charClassName}`.trim()}
+          variants={lineCharVariants}
+          initial="hidden"
+          animate={isExiting ? 'exiting' : 'visible'}
+          custom={isExiting ? [index, total] : index}
+        >
+          {char === ' ' ? '\u00A0' : char}
+        </motion.span>
+      ))}
+    </p>
+  );
+}
+
+export default function IntroOverlay({ onDone, introText = 'Igniting Innovation', introSubText = '' }) {
   const [progress, setProgress] = useState(0);
   const [isExiting, setIsExiting] = useState(false);
+  const shouldShowWordmark = !introSubText;
 
   useEffect(() => {
     let active = true;
@@ -57,16 +107,24 @@ export default function IntroOverlay({ onDone }) {
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
       >
-        <motion.p
-          className="font-inter text-xs sm:text-sm uppercase tracking-[0.35em] text-ignite-300 mb-6"
-          initial={{ opacity: 0, y: 14 }}
-          animate={isExiting ? { opacity: 0, y: -14 } : { opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-        >
-          Igniting Innovation
-        </motion.p>
+        <div className="mb-8 flex flex-col items-center">
+          <AnimatedTextLine
+            text={introText}
+            className="order-1 font-outfit text-xl sm:text-2xl lg:text-3xl font-semibold uppercase tracking-[0.12em] text-ignite-200"
+            isExiting={isExiting}
+          />
 
-        <AnimatedWordmarkIntro isExiting={isExiting} />
+          {introSubText && (
+            <AnimatedTextLine
+              text={introSubText}
+              className="order-2 mt-2 font-outfit text-3xl sm:text-5xl lg:text-6xl font-bold tracking-wide leading-tight"
+              charClassName="text-transparent bg-clip-text bg-gradient-to-r from-ignite-300 via-rose-300 to-ignite-200"
+              isExiting={isExiting}
+            />
+          )}
+        </div>
+
+        {shouldShowWordmark && <AnimatedWordmarkIntro isExiting={isExiting} />}
 
         <motion.div
           className="mt-10 w-64 sm:w-80 mx-auto"

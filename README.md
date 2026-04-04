@@ -112,6 +112,19 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173) to view it in your browser.
 
+### Avatar Upload Setup (Cloudinary)
+
+For student profile image upload, add these variables to `.env.local`:
+
+```bash
+VITE_CLOUDINARY_CLOUD_NAME=your_cloud_name
+VITE_CLOUDINARY_UPLOAD_PRESET=your_unsigned_upload_preset
+```
+
+Notes:
+- Use an **unsigned upload preset**.
+- Do **not** put Cloudinary API secret in frontend env files.
+
 ### Production Build
 
 ```bash

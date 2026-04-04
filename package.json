@@ -16,6 +16,8 @@
   "dependencies": {
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.5.0",
+    "@supabase/supabase-js": "^2.101.1",
+    "animejs": "^4.3.6",
     "framer-motion": "^11.18.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
