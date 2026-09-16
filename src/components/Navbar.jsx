@@ -225,13 +225,26 @@ export default function Navbar() {
         <Link
           to="/home"
           onClick={(e) => handleNavClick(e, { label: 'Home' }, false)}
-          className="brand-logo-shell brand-logo-nav hidden sm:inline-flex absolute left-8 sm:left-12 top-1/2 -translate-y-1/2 z-20"
+          className="brand-lockup brand-lockup-nav inline-flex items-center absolute left-4 sm:left-6 md:left-8 lg:left-12 top-1/2 -translate-y-1/2 z-20 group"
+          aria-label="Igniter Club GMIT and JIS Group 15 Years of Tomorrow"
         >
-          <img
-            src="/GMITxIgnite-removebg-preview.png"
-            alt="Igniter Club x GMIT Logo"
-            className="brand-logo-img"
-          />
+          <div className="brand-logo-shell brand-logo-nav">
+            <img
+              src="/GMITxIgnite-removebg-preview.png"
+              alt="Igniter Club x GMIT Logo"
+              className="brand-logo-img"
+            />
+          </div>
+
+          <span className="brand-lockup-divider" aria-hidden="true" />
+
+          <div className="brand-partner-shell">
+            <img
+              src="/gmit-jis-15years-dark.png"
+              alt="GMIT 15 Years of Tomorrow | JIS Group"
+              className="brand-partner-img"
+            />
+          </div>
         </Link>
 
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-center">

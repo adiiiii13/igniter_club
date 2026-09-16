@@ -26,12 +26,24 @@ export default function StudentLoginPage() {
           <FiArrowLeft aria-hidden="true" />
           <span>Back to Home</span>
         </Link>
-        <Link to="/home" className="brand-logo-shell brand-logo-auth mb-2" data-auth-enter aria-label="Go to home">
-          <img
-            src="/GMITxIgnite-removebg-preview.png"
-            alt="Igniter Club x GMIT Logo"
-            className="brand-logo-img"
-          />
+        <Link to="/home" className="brand-lockup brand-lockup-auth mb-3 group" data-auth-enter aria-label="Go to home">
+          <div className="brand-logo-shell brand-logo-auth">
+            <img
+              src="/GMITxIgnite-removebg-preview.png"
+              alt="Igniter Club x GMIT Logo"
+              className="brand-logo-img"
+            />
+          </div>
+
+          <span className="brand-lockup-divider" aria-hidden="true" />
+
+          <div className="brand-partner-shell">
+            <img
+              src="/gmit-jis-15years-dark.png"
+              alt="GMIT 15 Years of Tomorrow | JIS Group"
+              className="brand-partner-img"
+            />
+          </div>
         </Link>
         <h1 className="auth-title" data-auth-enter>Welcome back</h1>
         <p className="auth-subtitle" data-auth-enter>Continue your chapter with the club.</p>

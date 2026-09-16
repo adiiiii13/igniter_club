@@ -81,12 +81,24 @@ export default function StudentSidebar() {
     <aside className="hidden lg:flex flex-col w-64 bg-dark-900/70 border-r border-white/5 p-4 sticky top-0 h-screen">
       {/* Logo */}
       <div className="mb-8 px-2">
-        <Link to="/home" className="brand-logo-shell brand-logo-sidebar" aria-label="Go to home">
-          <img
-            src="/GMITxIgnite-removebg-preview.png"
-            alt="Igniter Club x GMIT Logo"
-            className="brand-logo-img"
-          />
+        <Link to="/home" className="brand-lockup brand-lockup-sidebar group" aria-label="Go to home">
+          <div className="brand-logo-shell brand-logo-sidebar">
+            <img
+              src="/GMITxIgnite-removebg-preview.png"
+              alt="Igniter Club x GMIT Logo"
+              className="brand-logo-img"
+            />
+          </div>
+
+          <span className="brand-lockup-divider" aria-hidden="true" />
+
+          <div className="brand-partner-shell">
+            <img
+              src="/gmit-jis-15years-dark.png"
+              alt="GMIT 15 Years of Tomorrow | JIS Group"
+              className="brand-partner-img"
+            />
+          </div>
         </Link>
       </div>
 

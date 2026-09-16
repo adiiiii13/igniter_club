@@ -27,12 +27,24 @@ export default function Footer() {
           {/* Brand */}
           <div className="lg:col-span-1">
             <div className="flex items-center mb-6">
-              <Link to="/home" className="brand-logo-shell brand-logo-footer" aria-label="Go to home">
-                <img 
-                  src="/GMITxIgnite-removebg-preview.png" 
-                  alt="Igniter Club x GMIT Logo" 
-                  className="brand-logo-img"
-                />
+              <Link to="/home" className="brand-lockup brand-lockup-footer group" aria-label="Go to home">
+                <div className="brand-logo-shell brand-logo-footer">
+                  <img 
+                    src="/GMITxIgnite-removebg-preview.png" 
+                    alt="Igniter Club x GMIT Logo" 
+                    className="brand-logo-img"
+                  />
+                </div>
+
+                <span className="brand-lockup-divider" aria-hidden="true" />
+
+                <div className="brand-partner-shell">
+                  <img
+                    src="/gmit-jis-15years-dark.png"
+                    alt="GMIT 15 Years of Tomorrow | JIS Group"
+                    className="brand-partner-img"
+                  />
+                </div>
               </Link>
             </div>
             <p className="font-inter text-sm text-dark-300 leading-relaxed mb-8 max-w-sm">

@@ -492,17 +492,17 @@ export default function AdminDashboard() {
       >
         {/* Sidebar Brand Header */}
         <div className="h-16 flex items-center px-4 border-b border-white/10 shrink-0 overflow-hidden">
-          <Link to="/home" className="flex items-center gap-3 min-w-max">
-            <div className="w-10 h-10 rounded-xl bg-ignite-500/10 border border-ignite-500/30 flex items-center justify-center text-ignite-400 shadow-md shadow-ignite-500/10 shrink-0">
+          <Link to="/home" className="flex items-center gap-3 min-w-max group" title="Go to Home">
+            <div className="w-10 h-10 rounded-xl bg-ignite-500/10 border border-ignite-500/30 flex items-center justify-center text-ignite-400 shadow-md shadow-ignite-500/10 shrink-0 group-hover:scale-105 transition-transform duration-300">
               <img src="/GMITxIgnite-removebg-preview.png" alt="Igniter" className="h-7 w-auto object-contain" />
             </div>
-            <div className={`flex flex-col transition-all duration-300 ${sidebarHovered ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2 pointer-events-none w-0'}`}>
-              <span className="text-sm font-bold font-outfit text-white whitespace-nowrap">
-                Igniter Club
-              </span>
-              <span className="text-[11px] text-dark-400 font-medium whitespace-nowrap">
-                Management
-              </span>
+            <div className={`flex items-center gap-2.5 transition-all duration-300 ${sidebarHovered ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2 pointer-events-none w-0'}`}>
+              <div className="h-5 w-px bg-white/15" />
+              <img
+                src="/gmit-jis-15years-dark.png"
+                alt="GMIT 15 Years of Tomorrow | JIS Group"
+                className="h-7 w-auto object-contain brightness-95 group-hover:brightness-110 transition-all"
+              />
             </div>
           </Link>
         </div>

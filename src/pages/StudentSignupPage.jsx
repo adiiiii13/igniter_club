@@ -66,12 +66,24 @@ export default function StudentSignupPage() {
     <main ref={pageRef} className="auth-page auth-page-student" data-route-item>
       <div className="auth-bg-glow" aria-hidden="true" />
       <section className="auth-card" data-auth-enter>
-        <Link to="/home" className="brand-logo-shell brand-logo-auth mb-2" data-auth-enter aria-label="Go to home">
-          <img
-            src="/GMITxIgnite-removebg-preview.png"
-            alt="Igniter Club x GMIT Logo"
-            className="brand-logo-img"
-          />
+        <Link to="/home" className="brand-lockup brand-lockup-auth mb-3 group" data-auth-enter aria-label="Go to home">
+          <div className="brand-logo-shell brand-logo-auth">
+            <img
+              src="/GMITxIgnite-removebg-preview.png"
+              alt="Igniter Club x GMIT Logo"
+              className="brand-logo-img"
+            />
+          </div>
+
+          <span className="brand-lockup-divider" aria-hidden="true" />
+
+          <div className="brand-partner-shell">
+            <img
+              src="/gmit-jis-15years-dark.png"
+              alt="GMIT 15 Years of Tomorrow | JIS Group"
+              className="brand-partner-img"
+            />
+          </div>
         </Link>
         <h1 className="auth-title" data-auth-enter>Create your member account</h1>
         <p className="auth-subtitle" data-auth-enter>Progressive signup flow, one section at a time.</p>
