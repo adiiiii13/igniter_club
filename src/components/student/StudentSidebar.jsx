@@ -6,7 +6,6 @@ import { supabase } from '../../utils/supabase';
 export default function StudentSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [navigatingTo, setNavigatingTo] = useState(null);
   
   const [student, setStudent] = useState({
     fullName: 'Student',
@@ -97,53 +96,37 @@ export default function StudentSidebar() {
           const Icon = item.icon;
           const isLocked = item.requiresProfile && student.isProfileComplete === false;
           const isActive = location.pathname === item.href;
-          const isNavigating = navigatingTo === item.href;
           
           return (
-            <a
+            <button
               key={item.label}
-              href={item.href}
-              onClick={(e) => {
-                e.preventDefault();
+              type="button"
+              onClick={() => {
                 if (isLocked) {
                   navigate('/student/complete-profile');
                   return;
                 }
                 if (isActive) return;
-                
-                // Show a smooth, professional loading state briefly, then natively redirect
-                // resolving any deep React Router bugs permanently.
-                setNavigatingTo(item.href);
-                setTimeout(() => {
-                  window.location.href = item.href;
-                }, 120);
+                navigate(item.href);
               }}
               title={isLocked ? 'Complete profile to unlock' : item.label}
-              className={`relative w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 ${
-                isActive && !isNavigating
+              className={`relative w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 text-left ${
+                isActive
                   ? 'text-white bg-dark-800/90 border border-ignite-400/40 shadow-[0_8px_24px_rgba(190,24,93,0.16)]'
                   : isLocked
                     ? 'text-dark-600 border border-transparent cursor-not-allowed'
-                    : isNavigating
-                      ? 'text-ignite-300 bg-ignite-400/10 border border-ignite-400/30 shadow-[0_0_15px_rgba(190,24,93,0.2)]'
-                      : 'text-dark-400 hover:text-white hover:bg-dark-800/50 border border-transparent'
+                    : 'text-dark-400 hover:text-white hover:bg-dark-800/50 border border-transparent'
               }`}
             >
-              {/* Optional pulsating background during navigation */}
-              {isNavigating && (
-                <span className="absolute inset-0 rounded-xl bg-ignite-400/20 animate-pulse" />
-              )}
-              
-              <Icon size={18} className={`relative z-10 ${isNavigating ? 'animate-bounce' : ''}`} />
-              <span className="relative z-10 flex-1 text-left">{item.label}</span>
-              
-              {isLocked && <FiLock size={14} className="relative z-10 text-dark-600" />}
+              <Icon size={18} className="shrink-0" />
+              <span className="flex-1 text-left">{item.label}</span>
+              {isLocked && <FiLock size={14} className="text-dark-600 shrink-0" />}
               {item.badge && (
-                <span className="relative z-10 inline-flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-semibold text-white">
+                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-semibold text-white">
                   {item.badge}
                 </span>
               )}
-            </a>
+            </button>
           );
         })}
       </nav>
@@ -164,14 +147,14 @@ export default function StudentSidebar() {
           </div>
         </div>
         {student.isProfileComplete === false && (
-          <div className="mb-3 rounded-lg border border-amber-400/30 bg-amber-400/10 p-2.5">
-            <p className="text-[11px] leading-relaxed text-amber-200">Complete your profile to unlock all sidebar options.</p>
+          <div className="mb-3 rounded-lg border border-ignite-500/30 bg-ignite-500/10 p-2.5 shadow-sm shadow-ignite-500/10">
+            <p className="text-[11px] leading-relaxed text-ignite-200">Complete your profile to unlock all sidebar options.</p>
             <button
               type="button"
               onClick={() => navigate('/student/complete-profile')}
-              className="mt-2 text-[11px] font-medium text-amber-300 hover:text-amber-200 transition"
+              className="mt-2 text-[11px] font-semibold text-ignite-300 hover:text-white transition"
             >
-              Complete Profile
+              Complete Profile →
             </button>
           </div>
         )}

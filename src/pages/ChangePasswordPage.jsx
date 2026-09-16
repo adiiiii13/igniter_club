@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { FiArrowLeft } from 'react-icons/fi';
 import { supabase } from '../utils/supabase';
 import { appRedirectPath } from '../utils/appUrl';
 
@@ -99,8 +100,8 @@ export default function ChangePasswordPage() {
     setError('');
     setStatus('');
 
-    if (!newPassword || newPassword.length < 6 || !/\d/.test(newPassword)) {
-      setError('Password must be at least 6 characters and include at least one number.');
+    if (!newPassword || newPassword.length < 6 || !/\d/.test(newPassword) || !/[a-zA-Z]/.test(newPassword)) {
+      setError('Password must be at least 6 characters and include at least one number and one letter.');
       return;
     }
 
@@ -165,6 +166,17 @@ export default function ChangePasswordPage() {
   return (
     <main className="min-h-screen bg-dark-950 flex items-center justify-center px-4">
       <div className="w-full max-w-md rounded-2xl border border-white/10 bg-dark-900/95 p-6 sm:p-8">
+
+        {/* Back button */}
+        <button
+          type="button"
+          onClick={() => navigate('/home')}
+          className="mb-5 inline-flex items-center gap-1.5 text-sm text-dark-400 hover:text-white transition-colors duration-200 group"
+        >
+          <FiArrowLeft className="text-base group-hover:-translate-x-0.5 transition-transform duration-200" />
+          Back to Home
+        </button>
+
         <h1 className="text-xl font-semibold text-white">Change Password</h1>
         <p className="mt-2 text-sm text-dark-400">
           {isRecoverySession

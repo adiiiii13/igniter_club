@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { FiShield, FiExternalLink, FiLogOut } from 'react-icons/fi';
 import RoleSelectionModal from './auth/RoleSelectionModal';
 import StudentLoginModal from './auth/StudentLoginModal';
 import StudentSignupModal from './auth/StudentSignupModal';
 import { navigateWithAnimeExit } from '../utils/authAnimations';
 import { supabase } from '../utils/supabase';
+import { getCurrentUserRole } from '../utils/authRole';
 
 const PARALLAX_LANDING_PATH = '/Parallax-website-main/';
 
@@ -16,23 +18,57 @@ export default function Navbar() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isStudentLoginModalOpen, setIsStudentLoginModalOpen] = useState(false);
   const [isStudentSignupModalOpen, setIsStudentSignupModalOpen] = useState(false);
+  const [loginEmail, setLoginEmail] = useState('');
   const [user, setUser] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminProfile, setAdminProfile] = useState(null);
   const userMenuContainerRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
 
   useEffect(() => {
-    const checkUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-    };
-    checkUser();
+    let isMounted = true;
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user || null);
+    const syncAuthState = async (currentUser) => {
+      if (!isMounted) return;
+      setUser(currentUser);
+
+      if (currentUser) {
+        const roleInfo = await getCurrentUserRole(currentUser);
+        if (isMounted) {
+          setIsAdmin(roleInfo.isAdmin);
+          setAdminProfile(roleInfo);
+        }
+      } else {
+        if (isMounted) {
+          setIsAdmin(false);
+          setAdminProfile(null);
+        }
+      }
+    };
+
+    // 1. Immediately read cached session on mount
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (isMounted && session?.user) {
+        syncAuthState(session.user);
+      }
+    });
+
+    // 2. Also verify with server
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (isMounted && user) {
+        syncAuthState(user);
+      }
+    });
+
+    // 3. Listen to all auth changes (including INITIAL_SESSION!)
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      const currentUser = session?.user || null;
+      syncAuthState(currentUser);
     });
 
     return () => {
+      isMounted = false;
       if (authListener && authListener.subscription) {
         authListener.subscription.unsubscribe();
       }
@@ -80,8 +116,8 @@ export default function Navbar() {
 
   const navLinks = [
     { label: 'Home', href: '/home' },
-    { label: 'About', href: '#about' },
-    { label: 'Events', href: '#events' },
+    { label: 'About', href: '/about' },
+    { label: 'Events', href: '/events' },
     { label: 'Communities', href: '/communities' },
   ];
 
@@ -96,23 +132,8 @@ export default function Navbar() {
       } else {
         navigate('/home');
       }
-      return;
     }
-
-    if (link.label === 'About' || link.label === 'Events') {
-      e.preventDefault();
-      const targetId = link.label.toLowerCase();
-
-      if (location.pathname === '/home') {
-        const element = document.getElementById(targetId);
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth' });
-          window.history.pushState(null, '', `#${targetId}`);
-        }
-      } else {
-        navigate(`/home#${targetId}`);
-      }
-    }
+    // About, Events, Communities — navigate normally via Link href
   };
 
   const handleSelectRole = (role) => {
@@ -127,24 +148,9 @@ export default function Navbar() {
     setIsStudentLoginModalOpen(true);
   };
 
-  const handleSignOnClick = async () => {
+  const handleSignOnClick = () => {
     setMobileOpen(false);
-
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        setIsAuthModalOpen(true);
-        return;
-      }
-
-      navigate('/home?intro=1');
-    } catch (err) {
-      console.error('Sign on auth check failed:', err);
-      navigate('/home?intro=1');
-    }
+    setIsAuthModalOpen(true);
   };
 
   const handleStudentLoginSuccess = async () => {
@@ -158,7 +164,12 @@ export default function Navbar() {
         return;
       }
 
-      navigate('/home?intro=1');
+      const roleInfo = await getCurrentUserRole(user);
+      if (roleInfo.isAdmin) {
+        navigate('/admin/dashboard?admin=1');
+      } else {
+        navigate('/home?intro=1');
+      }
     } catch (err) {
       console.error('Error after navbar login:', err);
       navigate('/home?intro=1');
@@ -252,24 +263,44 @@ export default function Navbar() {
 
             {user ? (
               <div ref={userMenuContainerRef} className="relative flex items-center gap-3 ml-3">
-                <Link to="/student/home" className="btn-header-primary px-4 py-2 text-sm">
-                  <span className="btn-roll" aria-hidden="true">
-                    <span className="btn-roll-track">
-                      <span className="btn-roll-text">Dashboard</span>
-                      <span className="btn-roll-text clone">Dashboard</span>
+                {isAdmin ? (
+                  <Link
+                    to="/admin/dashboard"
+                    className="flex items-center gap-2 px-4 py-2 rounded-full border border-ignite-500/50 bg-ignite-500/15 text-ignite-300 hover:bg-ignite-500/25 transition-all text-xs font-semibold tracking-wide uppercase font-mono shadow-lg shadow-ignite-500/15"
+                  >
+                    <FiShield className="text-ignite-400 text-sm" />
+                    <span>Admin Dashboard</span>
+                  </Link>
+                ) : (
+                  <Link to="/student/home" className="btn-header-primary px-4 py-2 text-sm">
+                    <span className="btn-roll" aria-hidden="true">
+                      <span className="btn-roll-track">
+                        <span className="btn-roll-text">Dashboard</span>
+                        <span className="btn-roll-text clone">Dashboard</span>
+                      </span>
                     </span>
-                  </span>
-                </Link>
+                  </Link>
+                )}
 
                 <Link
-                  to="/student/home"
-                  className="flex items-center justify-center w-10 h-10 rounded-full bg-ignite-500/10 border border-ignite-500/30 shadow-lg shadow-ignite-500/20 hover:bg-ignite-500/20 hover:scale-105 hover:-translate-y-0.5 transition-all duration-300 overflow-hidden"
+                  to={isAdmin ? '/admin/dashboard' : '/student/home'}
+                  className={`relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 overflow-hidden ${
+                    isAdmin
+                      ? 'bg-ignite-500/15 border border-ignite-500/60 shadow-lg shadow-ignite-500/20 hover:scale-105'
+                      : 'bg-ignite-500/10 border border-ignite-500/30 shadow-lg shadow-ignite-500/20 hover:bg-ignite-500/20 hover:scale-105 hover:-translate-y-0.5'
+                  }`}
+                  title={isAdmin ? 'Admin Dashboard' : 'Student Profile'}
                 >
                   {user.user_metadata?.avatar_url ? (
                     <img src={user.user_metadata.avatar_url} alt="Profile" className="w-full h-full object-cover" />
                   ) : (
-                    <span className="font-outfit font-bold text-ignite-300 text-lg">
+                    <span className="font-outfit font-bold text-lg text-ignite-300">
                       {user.email?.charAt(0).toUpperCase() || 'U'}
+                    </span>
+                  )}
+                  {isAdmin && (
+                    <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-dark-950 border border-ignite-500 flex items-center justify-center">
+                      <FiShield className="text-[8px] text-ignite-300" />
                     </span>
                   )}
                 </Link>
@@ -293,21 +324,43 @@ export default function Navbar() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
                       transition={{ duration: 0.2 }}
-                      className="absolute top-14 right-0 w-44 rounded-xl border border-white/10 bg-dark-900/95 p-2 shadow-2xl"
+                      className={`absolute top-14 right-0 rounded-2xl p-2 shadow-2xl backdrop-blur-xl border ${
+                        isAdmin
+                          ? 'w-52 border-ignite-500/30 bg-dark-900/95 shadow-ignite-500/10'
+                          : 'w-48 border-white/10 bg-dark-900/95'
+                      }`}
                     >
-                      <Link
-                        to="/student/home"
-                        onClick={() => setUserMenuOpen(false)}
-                        className="block rounded-lg px-3 py-2.5 text-sm text-white hover:bg-white/5 transition"
-                      >
-                        Dashboard
-                      </Link>
+                      {isAdmin ? (
+                        <>
+                          <div className="px-3 py-2 border-b border-white/10 mb-1">
+                            <p className="text-xs font-semibold text-white truncate">{adminProfile?.displayName || 'Administrator'}</p>
+                            <p className="text-[10px] text-ignite-400 font-mono uppercase tracking-wider">{adminProfile?.role || 'SUPER ADMIN'}</p>
+                          </div>
+                          <Link
+                            to="/admin/dashboard"
+                            onClick={() => setUserMenuOpen(false)}
+                            className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-ignite-200 hover:bg-ignite-500/10 transition"
+                          >
+                            <FiShield className="text-ignite-400" />
+                            <span>Admin Dashboard</span>
+                          </Link>
+                        </>
+                      ) : (
+                        <Link
+                          to="/student/home"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="block rounded-lg px-3 py-2.5 text-sm text-white hover:bg-white/5 transition"
+                        >
+                          Dashboard
+                        </Link>
+                      )}
                       <button
                         type="button"
                         onClick={handleLogout}
-                        className="mt-1 w-full rounded-lg px-3 py-2.5 text-left text-sm text-red-300 hover:bg-red-500/10 transition"
+                        className="mt-1 w-full rounded-lg px-3 py-2 text-left text-xs text-rose-300 hover:bg-rose-500/10 transition flex items-center gap-2"
                       >
-                        Logout
+                        <FiLogOut className="text-xs" />
+                        <span>Logout</span>
                       </button>
                     </motion.div>
                   )}
@@ -394,20 +447,36 @@ export default function Navbar() {
 
               {user ? (
                 <>
-                  <Link
-                    to="/student/home"
-                    className="mt-2 flex items-center gap-3 px-4 py-3 rounded-xl bg-ignite-500/10 border border-ignite-500/20 hover:bg-ignite-500/20 transition-all text-white font-medium"
-                    onClick={() => setMobileOpen(false)}
-                  >
-                    <div className="w-8 h-8 rounded-full bg-ignite-500/30 flex items-center justify-center overflow-hidden">
-                      {user.user_metadata?.avatar_url ? (
-                        <img src={user.user_metadata.avatar_url} alt="Profile" className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="text-ignite-200 font-bold">{user.email?.charAt(0).toUpperCase() || 'U'}</span>
-                      )}
-                    </div>
-                    Dashboard
-                  </Link>
+                  {isAdmin ? (
+                    <Link
+                      to="/admin/dashboard"
+                      className="mt-2 flex items-center gap-3 px-4 py-3 rounded-xl bg-ignite-500/15 border border-ignite-500/30 hover:bg-ignite-500/25 transition-all text-ignite-200 font-medium"
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      <div className="w-8 h-8 rounded-full bg-ignite-500/20 border border-ignite-500/40 flex items-center justify-center text-ignite-300">
+                        <FiShield />
+                      </div>
+                      <div className="flex flex-col text-left">
+                        <span className="text-sm font-semibold text-white">Admin Dashboard</span>
+                        <span className="text-[10px] text-ignite-400/80 font-mono uppercase">{adminProfile?.role || 'Super Admin'}</span>
+                      </div>
+                    </Link>
+                  ) : (
+                    <Link
+                      to="/student/home"
+                      className="mt-2 flex items-center gap-3 px-4 py-3 rounded-xl bg-ignite-500/10 border border-ignite-500/20 hover:bg-ignite-500/20 transition-all text-white font-medium"
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      <div className="w-8 h-8 rounded-full bg-ignite-500/30 flex items-center justify-center overflow-hidden">
+                        {user.user_metadata?.avatar_url ? (
+                          <img src={user.user_metadata.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-ignite-200 font-bold">{user.email?.charAt(0).toUpperCase() || 'U'}</span>
+                        )}
+                      </div>
+                      Dashboard
+                    </Link>
+                  )}
                   <button
                     type="button"
                     onClick={handleLogout}
@@ -445,6 +514,7 @@ export default function Navbar() {
         isOpen={isStudentLoginModalOpen}
         onClose={() => setIsStudentLoginModalOpen(false)}
         onLoginSuccess={handleStudentLoginSuccess}
+        initialEmail={loginEmail}
         onCreateAccount={() => {
           setIsStudentLoginModalOpen(false);
           setIsStudentSignupModalOpen(true);
@@ -455,6 +525,11 @@ export default function Navbar() {
         isOpen={isStudentSignupModalOpen}
         onClose={() => setIsStudentSignupModalOpen(false)}
         onSignupSuccess={handleStudentSignupSuccess}
+        onSwitchToLogin={(email) => {
+          if (email) setLoginEmail(email);
+          setIsStudentSignupModalOpen(false);
+          setIsStudentLoginModalOpen(true);
+        }}
       />
     </>
   );

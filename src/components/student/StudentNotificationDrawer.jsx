@@ -4,24 +4,17 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { animate } from 'animejs';
 import { FiBell, FiCalendar, FiAlertCircle, FiX, FiCheck } from 'react-icons/fi';
 
-export default function StudentNotificationDrawer({ isOpen, onClose, isProfileComplete = true, notifications = [] }) {
+const EMPTY_ARRAY = [];
+
+export default function StudentNotificationDrawer({ isOpen, onClose, isProfileComplete = true, notifications = EMPTY_ARRAY }) {
   const drawerRef = useRef(null);
   const navigate = useNavigate();
-  const [notificationItemsState, setNotificationItemsState] = useState([]);
+  const [notificationItemsState, setNotificationItemsState] = useState(notifications);
 
   useEffect(() => {
     setNotificationItemsState(notifications);
   }, [notifications]);
 
-  useEffect(() => {
-    if (!isOpen || !drawerRef.current) return;
-
-    animate(drawerRef.current, {
-      translateX: [400, 0],
-      opacity: [0, 1],
-      duration: 280,
-    });
-  }, [isOpen]);
 
   const reminderNotification = !isProfileComplete
     ? {
@@ -52,29 +45,28 @@ export default function StudentNotificationDrawer({ isOpen, onClose, isProfileCo
     setNotificationItemsState((prev) => prev.filter((item) => item.id !== id));
   };
 
-  if (!isOpen) return null;
-
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[100]">
-        {/* Backdrop */}
-        <motion.button
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onClose}
-          className="absolute inset-0 bg-black/40"
-        />
+      {isOpen && (
+        <div className="fixed inset-0 z-[100]">
+          {/* Backdrop */}
+          <motion.button
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+          />
 
-        {/* Drawer */}
-        <motion.div
-          ref={drawerRef}
-          initial={{ x: 400, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          exit={{ x: 400, opacity: 0 }}
-          transition={{ duration: 0.3 }}
-          className="absolute right-0 top-0 bottom-0 w-full sm:w-[26rem] bg-dark-900 border-l border-white/10 shadow-2xl flex flex-col"
-        >
+          {/* Drawer */}
+          <motion.div
+            initial={{ x: '100%', opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: '100%', opacity: 0 }}
+            transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+            className="absolute right-0 top-0 bottom-0 w-full sm:w-[26rem] bg-dark-900 border-l border-white/10 shadow-2xl flex flex-col"
+          >
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
             <div className="flex items-center gap-3">
@@ -172,7 +164,8 @@ export default function StudentNotificationDrawer({ isOpen, onClose, isProfileCo
             </div>
           </div>
         </motion.div>
-      </div>
+        </div>
+      )}
     </AnimatePresence>
   );
 }

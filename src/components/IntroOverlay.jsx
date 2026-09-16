@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import { FiShield } from 'react-icons/fi';
 import { preloadAllFrames } from '../utils/framePreload';
 import AnimatedWordmarkIntro from './AnimatedWordmarkIntro';
 
@@ -55,7 +56,7 @@ function AnimatedTextLine({ text, className, isExiting, charClassName = '' }) {
   );
 }
 
-export default function IntroOverlay({ onDone, introText = 'Igniting Innovation', introSubText = '' }) {
+export default function IntroOverlay({ onDone, introText = 'Igniting Innovation', introSubText = '', isAdmin = false }) {
   const [progress, setProgress] = useState(0);
   const [isExiting, setIsExiting] = useState(false);
   const shouldShowWordmark = !introSubText;
@@ -110,7 +111,9 @@ export default function IntroOverlay({ onDone, introText = 'Igniting Innovation'
         <div className="mb-8 flex flex-col items-center">
           <AnimatedTextLine
             text={introText}
-            className="order-1 font-outfit text-xl sm:text-2xl lg:text-3xl font-semibold uppercase tracking-[0.12em] text-ignite-200"
+            className={`order-1 font-outfit text-xl sm:text-2xl lg:text-3xl font-semibold uppercase tracking-[0.12em] ${
+              isAdmin ? 'text-ignite-300' : 'text-ignite-200'
+            }`}
             isExiting={isExiting}
           />
 
@@ -118,9 +121,25 @@ export default function IntroOverlay({ onDone, introText = 'Igniting Innovation'
             <AnimatedTextLine
               text={introSubText}
               className="order-2 mt-2 font-outfit text-3xl sm:text-5xl lg:text-6xl font-bold tracking-wide leading-tight"
-              charClassName="text-transparent bg-clip-text bg-gradient-to-r from-ignite-300 via-rose-300 to-ignite-200"
+              charClassName={
+                isAdmin
+                  ? 'text-transparent bg-clip-text bg-gradient-to-r from-ignite-400 via-rose-300 to-ignite-200'
+                  : 'text-transparent bg-clip-text bg-gradient-to-r from-ignite-300 via-rose-300 to-ignite-200'
+              }
               isExiting={isExiting}
             />
+          )}
+
+          {isAdmin && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.3, duration: 0.4 }}
+              className="order-3 mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-ignite-500/40 bg-ignite-500/10 text-ignite-300 text-xs font-semibold tracking-widest uppercase shadow-lg shadow-ignite-500/10"
+            >
+              <FiShield className="text-ignite-400" />
+              <span>Verified Administrator</span>
+            </motion.div>
           )}
         </div>
 
@@ -134,12 +153,16 @@ export default function IntroOverlay({ onDone, introText = 'Igniting Innovation'
         >
           <div className="relative h-1.5 rounded-full bg-dark-800 overflow-hidden">
             <motion.div
-              className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-ignite-600 via-ignite-500 to-rose-400"
+              className={`absolute top-0 left-0 h-full rounded-full ${
+                isAdmin
+                  ? 'bg-gradient-to-r from-ignite-700 via-ignite-500 to-rose-400'
+                  : 'bg-gradient-to-r from-ignite-600 via-ignite-500 to-rose-400'
+              }`}
               style={{ width: `${progress}%` }}
             />
           </div>
           <p className="font-inter mt-3 text-xs tracking-[0.2em] uppercase text-dark-400">
-            Loading background {progress}%
+            {isAdmin ? `Loading dashboard ${progress}%` : `Loading background ${progress}%`}
           </p>
         </motion.div>
       </motion.div>

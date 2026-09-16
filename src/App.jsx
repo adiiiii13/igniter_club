@@ -4,12 +4,18 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import LandingPage from './pages/LandingPage';
 import CommunitiesPage from './pages/CommunitiesPage';
+import AboutPage from './pages/AboutPage';
+import EventsPage from './pages/EventsPage';
 import IntroPage from './pages/IntroPage';
 import IntroOverlay from './components/IntroOverlay';
 import AdminLoginPage from './pages/AdminLoginPage';
+import AdminDashboard from './pages/AdminDashboard';
+import AdminProtectedRoute from './components/AdminProtectedRoute';
 import StudentProfileComplete from './pages/StudentProfileComplete';
 import StudentHome from './pages/StudentHome';
 import StudentSectionPage from './pages/StudentSectionPage';
+import PublicBannerModal from './components/PublicBannerModal';
+import { getCurrentUserRole } from './utils/authRole';
 
 // Wrapper components to prevent React Router 6/7 static element caching bugs that cause frozen UI on parameter changes
 function StudentHomeRoute() {
@@ -48,42 +54,69 @@ export default function App() {
   const isIntroPage = location.pathname === '/' || location.pathname === '/welcome' || location.pathname === '/intro' || location.pathname === '/intro/' || location.pathname.startsWith('/Parallax-website-main');
   const isAuthRoute = location.pathname.startsWith('/auth/');
   const isStudentRoute = location.pathname.startsWith('/student/');
-  const forceStudentIntro = queryParams.get('intro') === '1';
+  const isAdminRoute = location.pathname.startsWith('/admin');
+
+  useEffect(() => {
+    // If arriving with a Supabase recovery token in URL hash
+    const hash = window.location.hash || '';
+    if (hash.includes('type=recovery') && location.pathname !== '/auth/change-password') {
+      navigate('/auth/change-password' + hash, { replace: true });
+      return;
+    }
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        navigate('/auth/change-password');
+      }
+    });
+
+    return () => {
+      subscription?.unsubscribe();
+    };
+  }, [navigate, location.pathname]);
+
+  const forceIntro = queryParams.get('intro') === '1' || queryParams.get('admin') === '1';
   const [showOverlayIntro, setShowOverlayIntro] = useState(false);
   const [overlayIntroText, setOverlayIntroText] = useState('Igniting Innovation');
   const [overlayIntroSubText, setOverlayIntroSubText] = useState('');
+  const [isOverlayAdmin, setIsOverlayAdmin] = useState(false);
   const prevPathRef = useRef(location.pathname);
   const isMainSiteRoute = useMemo(
-    () => location.pathname === '/home' || location.pathname === '/communities',
+    () =>
+      location.pathname === '/home' ||
+      location.pathname === '/about' ||
+      location.pathname === '/events' ||
+      location.pathname === '/communities',
     [location.pathname],
   );
-  const isStudentIntroEligibleRoute = useMemo(
+  const isIntroEligibleRoute = useMemo(
     () =>
       location.pathname === '/student/home' ||
       location.pathname === '/student/activity' ||
       location.pathname === '/student/events' ||
       location.pathname === '/student/resources' ||
-      location.pathname === '/student/notifications',
+      location.pathname === '/student/notifications' ||
+      location.pathname === '/admin/dashboard' ||
+      location.pathname === '/home',
     [location.pathname],
   );
 
   useEffect(() => {
     if (!isMainSiteRoute) return;
-    if (forceStudentIntro) return;
+    if (forceIntro) return;
 
     setOverlayIntroText('Igniting Innovation');
     setOverlayIntroSubText('');
+    setIsOverlayAdmin(false);
     setShowOverlayIntro(true);
-  }, [isMainSiteRoute, forceStudentIntro]);
+  }, [isMainSiteRoute, forceIntro]);
 
   useEffect(() => {
-    const showStudentIntro = async () => {
+    const triggerUserIntro = async () => {
       prevPathRef.current = location.pathname;
 
-      if (!forceStudentIntro) return;
-
-      const isEligible = isStudentIntroEligibleRoute || location.pathname === '/home';
-      if (!isEligible) return;
+      if (!forceIntro) return;
+      if (!isIntroEligibleRoute) return;
 
       try {
         const {
@@ -93,37 +126,41 @@ export default function App() {
         if (!user) {
           setOverlayIntroText('Igniting Innovation');
           setOverlayIntroSubText('');
+          setIsOverlayAdmin(false);
           setShowOverlayIntro(true);
           return;
         }
 
-        const { data } = await supabase
-          .from('students')
-          .select('full_name')
-          .eq('id', user.id)
-          .single();
+        const roleInfo = await getCurrentUserRole(user);
 
-        const studentName = data?.full_name?.trim() || 'Student';
-        setOverlayIntroText('Welcome to Igniter Club X GMIT');
-        setOverlayIntroSubText(studentName);
+        if (roleInfo.isAdmin) {
+          setIsOverlayAdmin(true);
+          setOverlayIntroText('Welcome to Igniter Admin');
+          setOverlayIntroSubText(roleInfo.displayName || 'Club Administrator');
+        } else {
+          setIsOverlayAdmin(false);
+          setOverlayIntroText('Welcome to Igniter Club X GMIT');
+          setOverlayIntroSubText(roleInfo.displayName || 'Student');
+        }
+
         setShowOverlayIntro(true);
 
-        if (forceStudentIntro) {
-          const nextParams = new URLSearchParams(location.search);
-          nextParams.delete('intro');
-          const nextSearch = nextParams.toString();
-          navigate(
-            `${location.pathname}${nextSearch ? `?${nextSearch}` : ''}${location.hash || ''}`,
-            { replace: true }
-          );
-        }
+        // Remove intro / admin query parameters cleanly
+        const nextParams = new URLSearchParams(location.search);
+        nextParams.delete('intro');
+        nextParams.delete('admin');
+        const nextSearch = nextParams.toString();
+        navigate(
+          `${location.pathname}${nextSearch ? `?${nextSearch}` : ''}${location.hash || ''}`,
+          { replace: true }
+        );
       } catch (err) {
-        console.error('Student intro load error:', err);
+        console.error('Intro load error:', err);
       }
     };
 
-    showStudentIntro();
-  }, [location.pathname, location.search, location.hash, isStudentIntroEligibleRoute, forceStudentIntro, navigate]);
+    triggerUserIntro();
+  }, [location.pathname, location.search, location.hash, isIntroEligibleRoute, forceIntro, navigate]);
 
   useEffect(() => {
     if (location.pathname !== '/home' || !location.hash) return;
@@ -148,35 +185,53 @@ export default function App() {
 
   return (
     <div className="relative min-h-screen text-dark-200">
+      <PublicBannerModal hasActiveIntro={showOverlayIntro} />
       {showOverlayIntro && (
-        <IntroOverlay onDone={handleOverlayDone} introText={overlayIntroText} introSubText={overlayIntroSubText} />
+        <IntroOverlay
+          onDone={handleOverlayDone}
+          introText={overlayIntroText}
+          introSubText={overlayIntroSubText}
+          isAdmin={isOverlayAdmin}
+        />
       )}
-      {!isIntroPage && !isAuthRoute && !isStudentRoute && <Navbar />}
+      {!isIntroPage && !isAuthRoute && !isStudentRoute && !isAdminRoute && <Navbar />}
 
-      <Routes key={location.pathname}>
+      <Routes>
         <Route path="/" element={<Navigate to="/Parallax-website-main/" replace />} />
         <Route path="/welcome" element={<Navigate to="/Parallax-website-main/" replace />} />
         <Route path="/intro" element={<Navigate to="/Parallax-website-main/" replace />} />
         <Route path="/intro/" element={<Navigate to="/Parallax-website-main/" replace />} />
         <Route path="/home" element={<LandingPage />} />
-        <Route path="/auth/admin/login" element={<Navigate to="/home" replace />} />
+        <Route path="/auth/admin/login" element={<AdminLoginPage />} />
         <Route path="/auth/verify-signup" element={<VerifySignupPage />} />
         <Route path="/auth/change-password" element={<ChangePasswordPage />} />
         
+        {/* Admin Routes */}
+        <Route
+          path="/admin/dashboard"
+          element={
+            <AdminProtectedRoute>
+              <AdminDashboard />
+            </AdminProtectedRoute>
+          }
+        />
+        <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+
         {/* Student Routes */}
         <Route path="/student/oauth-setup" element={<OAuthCollegeIdSetup />} />
         <Route path="/student/complete-profile" element={<StudentProfileCompleteRoute />} />
         <Route path="/student/home" element={<StudentHomeRoute />} />
         <Route path="/student/:section" element={<StudentSectionRoute />} />
         
-        <Route path="/about" element={<Navigate to="/home#about" replace />} />
-        <Route path="/events" element={<Navigate to="/home#events" replace />} />
-        <Route path="/join" element={<Navigate to="/home#join" replace />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/events" element={<EventsPage />} />
+        <Route path="/join" element={<Navigate to="/home#founders" replace />} />
+        <Route path="/founders" element={<Navigate to="/home#founders" replace />} />
         <Route path="/communities" element={<CommunitiesPage />} />
         <Route path="*" element={<Navigate to="/home" replace />} />
       </Routes>
 
-      {!isIntroPage && !isAuthRoute && !isStudentRoute && <Footer />}
+      {!isIntroPage && !isAuthRoute && !isStudentRoute && !isAdminRoute && <Footer />}
     </div>
   );
 }

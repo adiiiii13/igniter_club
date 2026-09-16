@@ -1,35 +1,31 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import HeroSection from '../components/HeroSection';
-import AboutSection from '../components/AboutSection';
-import EventsSection from '../components/EventsSection';
 import JoinSection from '../components/JoinSection';
 import BackgroundScrubber from '../components/BackgroundScrubber';
-import StoryTimelineSection from '../components/StoryTimelineSection';
 import RoleSelectionModal from '../components/auth/RoleSelectionModal';
 import StudentSignupModal from '../components/auth/StudentSignupModal';
 import StudentLoginModal from '../components/auth/StudentLoginModal';
 import { navigateWithAnimeExit } from '../utils/authAnimations';
 import { supabase } from '../utils/supabase';
+import { getCurrentUserRole } from '../utils/authRole';
 
 export default function LandingPage() {
   const navigate = useNavigate();
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [loginEmail, setLoginEmail] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setIsLoggedIn(!!user);
-    };
-    checkAuth();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setIsLoggedIn(!!session?.user);
+    });
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'INITIAL_SESSION') return;
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       setIsLoggedIn(!!session?.user);
     });
 
@@ -40,19 +36,23 @@ export default function LandingPage() {
 
   const handleAuthEntry = async () => {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data: sessionData } = await supabase.auth.getSession();
+      const user = sessionData?.session?.user;
 
       if (!user) {
         setIsRoleModalOpen(true);
         return;
       }
 
-      navigate('/home?intro=1');
+      const roleInfo = await getCurrentUserRole(user);
+      if (roleInfo.isAdmin) {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/student/home');
+      }
     } catch (err) {
       console.error('Auth entry check failed:', err);
-      navigate('/home?intro=1');
+      setIsRoleModalOpen(true);
     }
   };
 
@@ -70,11 +70,15 @@ export default function LandingPage() {
       return;
     }
 
-    // After signup, check profile completion and redirect
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        navigate('/home?intro=1');
+        const roleInfo = await getCurrentUserRole(user);
+        if (roleInfo.isAdmin) {
+          navigate('/admin/dashboard?intro=1');
+        } else {
+          navigate('/home?intro=1');
+        }
       }
     } catch (err) {
       console.error('Error after signup:', err);
@@ -83,11 +87,15 @@ export default function LandingPage() {
   };
 
   const handleLoginSuccess = async () => {
-    // After login, check profile completion and redirect
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        navigate('/home?intro=1');
+        const roleInfo = await getCurrentUserRole(user);
+        if (roleInfo.isAdmin) {
+          navigate('/admin/dashboard?intro=1');
+        } else {
+          navigate('/home?intro=1');
+        }
       }
     } catch (err) {
       console.error('Error after login:', err);
@@ -107,9 +115,6 @@ export default function LandingPage() {
         <div data-route-item>
           <HeroSection onAuthClick={handleAuthEntry} isLoggedIn={isLoggedIn} />
         </div>
-        <div data-route-item>
-          <AboutSection />
-        </div>
 
         {/* Subtle separator */}
         <div className="max-w-6xl mx-auto px-4">
@@ -117,30 +122,8 @@ export default function LandingPage() {
         </div>
 
         <div data-route-item>
-          <StoryTimelineSection />
+          <JoinSection />
         </div>
-
-        {/* Subtle separator */}
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="h-px bg-gradient-to-r from-transparent via-ignite-500/20 to-transparent" />
-        </div>
-
-        <div data-route-item>
-          <EventsSection />
-        </div>
-
-        {/* Subtle separator */}
-        {!isLoggedIn && (
-          <div className="max-w-6xl mx-auto px-4">
-            <div className="h-px bg-gradient-to-r from-transparent via-ignite-500/20 to-transparent" />
-          </div>
-        )}
-
-        {!isLoggedIn && (
-          <div data-route-item>
-            <JoinSection onAuthClick={handleAuthEntry} />
-          </div>
-        )}
       </main>
 
       {/* Auth Modals */}
@@ -154,12 +137,18 @@ export default function LandingPage() {
         isOpen={isSignupModalOpen}
         onClose={() => setIsSignupModalOpen(false)}
         onSignupSuccess={handleSignupSuccess}
+        onSwitchToLogin={(email) => {
+          if (email) setLoginEmail(email);
+          setIsSignupModalOpen(false);
+          setIsLoginModalOpen(true);
+        }}
       />
 
       <StudentLoginModal
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
         onLoginSuccess={handleLoginSuccess}
+        initialEmail={loginEmail}
         onCreateAccount={() => {
           setIsLoginModalOpen(false);
           setIsSignupModalOpen(true);

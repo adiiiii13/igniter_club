@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { FiX, FiChevronDown } from 'react-icons/fi';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FiX, FiChevronDown, FiCheck } from 'react-icons/fi';
 import { supabase } from '../../utils/supabase';
 
 const DEPARTMENTS = [
@@ -33,6 +34,7 @@ export default function EditProfileModal({ isOpen, onClose, student, onSaved }) 
   });
   const [errors, setErrors] = useState({});
   const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
   const [isDepartmentOpen, setIsDepartmentOpen] = useState(false);
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState('');
@@ -219,8 +221,12 @@ export default function EditProfileModal({ isOpen, onClose, student, onSaved }) 
 
       if (error) throw error;
 
+      setSaveSuccess(true);
       onSaved?.();
-      onClose?.();
+      setTimeout(() => {
+        setSaveSuccess(false);
+        onClose?.();
+      }, 950);
     } catch (err) {
       setErrors({ submit: err.message || 'Failed to save profile changes.' });
     } finally {
@@ -229,15 +235,32 @@ export default function EditProfileModal({ isOpen, onClose, student, onSaved }) 
   };
 
   return (
-    <div className="fixed inset-0 z-[130] flex items-center justify-center p-4">
-      <button type="button" className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} aria-label="Close edit profile" />
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center p-4">
+          <motion.button
+            type="button"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="absolute inset-0 bg-black/70 backdrop-blur-md"
+            onClick={onClose}
+            aria-label="Close edit profile"
+          />
 
-      <div className="relative z-10 w-full max-w-xl rounded-2xl border border-white/10 bg-dark-900 p-6 shadow-2xl">
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute right-4 top-4 rounded-lg p-1.5 text-dark-400 hover:bg-white/5 hover:text-white transition"
-        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: 12 }}
+            transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
+            className="relative z-10 w-full max-w-xl rounded-2xl border border-white/10 bg-dark-900 p-6 shadow-2xl"
+          >
+            <button
+              type="button"
+              onClick={onClose}
+              className="absolute right-4 top-4 rounded-lg p-1.5 text-dark-400 hover:bg-white/5 hover:text-white transition active:scale-95"
+            >
           <FiX size={18} />
         </button>
 
@@ -445,20 +468,38 @@ export default function EditProfileModal({ isOpen, onClose, student, onSaved }) 
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-white/10 px-4 py-2 text-sm text-dark-300 hover:bg-white/5 hover:text-white transition"
+              className="rounded-lg border border-white/10 px-4 py-2 text-sm text-dark-300 hover:bg-white/5 hover:text-white transition active:scale-95"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={isSaving}
-              className="rounded-lg bg-ignite-400 px-4 py-2 text-sm font-medium text-dark-900 hover:bg-ignite-300 transition disabled:opacity-60"
+              disabled={isSaving || saveSuccess}
+              className={`rounded-lg px-5 py-2 text-sm font-medium transition-all duration-200 flex items-center gap-2 active:scale-[0.98] ${
+                saveSuccess
+                  ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/25 scale-[1.02]'
+                  : 'bg-ignite-400 text-dark-900 hover:bg-ignite-300 disabled:opacity-60'
+              }`}
             >
-              {isSaving ? 'Saving...' : 'Save Changes'}
+              {saveSuccess ? (
+                <>
+                  <FiCheck size={16} className="text-white" />
+                  <span>Changes Saved!</span>
+                </>
+              ) : isSaving ? (
+                <>
+                  <div className="h-4 w-4 rounded-full border-2 border-dark-900/30 border-t-dark-900 animate-spin" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <span>Save Changes</span>
+              )}
             </button>
           </div>
         </form>
-      </div>
-    </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
   );
 }

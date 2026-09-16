@@ -300,14 +300,14 @@ export default function StudentHome() {
             <StudentProfileStrip student={safeStudent} onEditProfile={() => setIsEditProfileOpen(true)} />
 
             {!safeStudent.isProfileComplete && (
-              <div className="mx-4 mt-4 rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 sm:mx-6">
-                <p className="text-sm text-amber-100">Complete your profile to unlock all sidebar sections.</p>
+              <div className="mx-4 mt-4 rounded-xl border border-ignite-500/30 bg-ignite-500/10 px-4 py-3 sm:mx-6 shadow-sm shadow-ignite-500/10">
+                <p className="text-sm text-ignite-100">Complete your profile to unlock all sidebar sections.</p>
                 <button
                   type="button"
                   onClick={() => navigate('/student/complete-profile')}
-                  className="mt-2 text-xs font-medium text-amber-300 hover:text-amber-200 transition"
+                  className="mt-2 text-xs font-semibold text-ignite-300 hover:text-white transition"
                 >
-                  Go to Complete Profile
+                  Go to Complete Profile →
                 </button>
               </div>
             )}

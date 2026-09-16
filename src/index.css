@@ -622,31 +622,45 @@
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 0.8rem;
+  gap: 0.85rem;
   border-radius: 1rem;
-  border: 1px solid rgba(251, 113, 133, 0.24);
+  border: 1px solid rgba(251, 113, 133, 0.22);
   background: linear-gradient(140deg, rgba(30, 41, 59, 0.72), rgba(15, 23, 42, 0.88));
-  padding: 0.9rem 0.95rem;
-  transition: transform 0.2s ease, border-color 0.2s ease;
+  padding: 0.9rem 1rem;
+  transition: transform 0.12s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.12s ease, box-shadow 0.12s ease;
+  cursor: pointer;
+  text-align: left;
 }
 
 .auth-role-btn:hover {
   transform: translateY(-2px);
-  border-color: rgba(251, 113, 133, 0.5);
+  border-color: rgba(251, 113, 133, 0.6);
+  box-shadow: 0 4px 16px -2px rgba(251, 113, 133, 0.18);
+}
+
+.auth-role-btn:active {
+  transform: translateY(0);
+  transition-duration: 0.05s;
 }
 
 .auth-role-btn-admin {
-  border-color: rgba(148, 163, 184, 0.24);
+  border-color: rgba(244, 63, 94, 0.25);
 }
 
 .auth-role-btn-admin:hover {
-  border-color: rgba(148, 163, 184, 0.45);
+  border-color: rgba(244, 63, 94, 0.65);
+  box-shadow: 0 4px 16px -2px rgba(244, 63, 94, 0.22);
+}
+
+.auth-role-btn-admin:active {
+  transform: translateY(0);
+  transition-duration: 0.05s;
 }
 
 .auth-page-admin {
   background:
     radial-gradient(circle at 85% 15%, rgba(59, 130, 246, 0.1), transparent 40%),
-    radial-gradient(circle at 10% 75%, rgba(245, 158, 11, 0.08), transparent 44%),
+    radial-gradient(circle at 10% 75%, rgba(244, 63, 94, 0.08), transparent 44%),
     #020617;
 }
 
@@ -678,21 +692,37 @@
 }
 
 .auth-input-admin:focus {
-  border-color: rgba(245, 158, 11, 0.45);
-  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.14);
+  border-color: rgba(244, 63, 94, 0.5);
+  box-shadow: 0 0 0 2px rgba(244, 63, 94, 0.18);
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-text-fill-color: #f8fafc !important;
+  -webkit-box-shadow: 0 0 0px 1000px #030712 inset !important;
+  transition: background-color 5000s ease-in-out 0s;
 }
 
 .admin-cta-btn {
   border-radius: 0.95rem;
-  border: 1px solid rgba(245, 158, 11, 0.35);
+  border: 1px solid rgba(244, 63, 94, 0.35);
   background: linear-gradient(125deg, #1e293b, #0f172a);
   color: #f8fafc;
   padding: 0.75rem 1rem;
-  transition: border-color 0.2s ease;
+  transition: transform 0.12s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.12s ease, box-shadow 0.12s ease;
 }
 
 .admin-cta-btn:hover {
-  border-color: rgba(245, 158, 11, 0.58);
+  transform: translateY(-2px);
+  border-color: rgba(244, 63, 94, 0.7);
+  box-shadow: 0 4px 16px -2px rgba(244, 63, 94, 0.25);
+}
+
+.admin-cta-btn:active {
+  transform: translateY(0);
+  transition-duration: 0.05s;
 }
 
 @media (min-width: 640px) {
@@ -707,6 +737,64 @@
   }
 
   .transition-smooth {
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Soft and subtle micro-interaction helpers */
+  .tap-subtle {
+    transition: transform 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .tap-subtle:active {
+    transform: scale(0.975);
+  }
+
+  .hover-lift {
+    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+  }
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
   }
 }
+
+/* Global button click tactile micro-interaction (soft & subtle) */
+button:not(:disabled):not(.no-tap):active,
+[role="button"]:not([aria-disabled="true"]):active {
+  transform: scale(0.98);
+  transition: transform 0.08s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Smooth input interactions */
+input:not([type="checkbox"]):not([type="radio"]),
+select,
+textarea {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: rgba(244, 63, 94, 0.7);
+  box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.14);
+}
+
+/* Soft save feedback animations */
+@keyframes soft-save-pop {
+  0% {
+    transform: scale(0.92);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.04);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-save-pop {
+  animation: soft-save-pop 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+

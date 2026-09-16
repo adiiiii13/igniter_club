@@ -2,29 +2,55 @@
   command = "npm run build"
   publish = "dist"
 
+# Prevent stale JS chunk errors after deploys
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+[[headers]]
+  for = "/assets/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/assets/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
 [[redirects]]
   from = "/"
-  to = "/Parallax-website-main/"
+  to = "/welcome/"
   status = 302
 
 [[redirects]]
   from = "/welcome"
-  to = "/Parallax-website-main/"
+  to = "/welcome/"
   status = 302
 
 [[redirects]]
   from = "/intro"
-  to = "/Parallax-website-main/"
+  to = "/welcome/"
   status = 302
 
 [[redirects]]
   from = "/intro/"
-  to = "/Parallax-website-main/"
+  to = "/welcome/"
   status = 302
 
 [[redirects]]
-  from = "/Parallax-website-main/*"
-  to = "/Parallax-website-main/:splat"
+  from = "/Parallax-website-main"
+  to = "/welcome/"
+  status = 301
+
+[[redirects]]
+  from = "/Parallax-website-main/"
+  to = "/welcome/"
+  status = 301
+
+[[redirects]]
+  from = "/welcome/*"
+  to = "/welcome/:splat"
   status = 200
 
 [[redirects]]

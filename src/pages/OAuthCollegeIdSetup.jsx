@@ -90,61 +90,76 @@ export default function OAuthCollegeIdSetup() {
       setCurrentUser(user);
       setLoginIntroSubText((user.user_metadata?.full_name || '').trim() || 'Student');
 
-      // In login flow, retry account check briefly to avoid GMIT form flicker
-      // while auth/session state settles after OAuth redirect.
-      if (!isSignupFlow) {
-        const MAX_ATTEMPTS = 6;
-        const RETRY_DELAY_MS = 350;
-        let student = null;
+      // Check if student already exists and has college_id (whether arriving from login or signup)
+      const normalizedEmail = (user.email || '').trim().toLowerCase();
+      const MAX_ATTEMPTS = 6;
+      const RETRY_DELAY_MS = 350;
+      let student = null;
 
-        for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
-          const { data, error } = await supabase
+      for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
+        let { data, error } = await supabase
+          .from('students')
+          .select('id, college_id, avatar, full_name, is_profile_complete, email')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        // If not found by user.id, check by email in case of OAuth account linking
+        if (!data && normalizedEmail) {
+          const { data: byEmailData } = await supabase
             .from('students')
-            .select('college_id, avatar, full_name')
-            .eq('id', user.id)
+            .select('id, college_id, avatar, full_name, is_profile_complete, email')
+            .eq('email', normalizedEmail)
             .maybeSingle();
 
-          if (error) {
-            console.error('OAuth account check error:', error);
-          }
-
-          student = data || null;
-
-          if (student?.full_name?.trim()) {
-            setLoginIntroSubText(student.full_name.trim());
-          }
-
-          if (student?.college_id) {
-            if (!student?.avatar) {
-              await syncOAuthAvatar(user);
+          if (byEmailData) {
+            data = byEmailData;
+            // Align student record id if necessary
+            if (byEmailData.id !== user.id) {
+              await supabase
+                .from('students')
+                .update({ id: user.id })
+                .eq('email', normalizedEmail);
             }
-            setLoginDecision('home');
-            setIsCheckingAccount(false);
-            return;
           }
-
-          await delay(RETRY_DELAY_MS);
         }
 
-        setLoginDecision('require_college');
-        setIsCheckingAccount(false);
-        return;
+        if (error) {
+          console.error('OAuth account check error:', error);
+        }
+
+        student = data || null;
+
+        if (student?.full_name?.trim()) {
+          setLoginIntroSubText(student.full_name.trim());
+        }
+
+        // If user already has a college ID, they are an existing user!
+        if (student?.college_id) {
+          if (!student?.avatar) {
+            await syncOAuthAvatar(user);
+          }
+          setLoginDecision('home');
+          setIsCheckingAccount(false);
+          return;
+        }
+
+        await delay(RETRY_DELAY_MS);
       }
 
+      // Only if no college ID exists do we require setting it up
       setLoginDecision('require_college');
       setIsCheckingAccount(false);
     };
     getUser();
-  }, [navigate, isSignupFlow]);
+  }, [navigate]);
 
   useEffect(() => {
-    if (isSignupFlow) return;
     if (!isLoginIntroDone) return;
     if (isCheckingAccount) return;
     if (loginDecision !== 'home') return;
 
     navigate('/student/home', { replace: true });
-  }, [isSignupFlow, isLoginIntroDone, isCheckingAccount, loginDecision, navigate]);
+  }, [isLoginIntroDone, isCheckingAccount, loginDecision, navigate]);
 
   // Cooldown timer
   useEffect(() => {
@@ -178,6 +193,7 @@ export default function OAuthCollegeIdSetup() {
       if (!password) newErrors.password = 'Password required';
       if (password.length < 6) newErrors.password = 'Minimum 6 characters';
       if (!/\d/.test(password)) newErrors.password = 'Must contain at least one number';
+      if (!/[a-zA-Z]/.test(password)) newErrors.password = 'Must contain at least one letter';
     }
 
     setErrors(newErrors);
@@ -242,20 +258,20 @@ export default function OAuthCollegeIdSetup() {
       // Create or update student record with college ID
       const { data: existingStudent } = await supabase
         .from('students')
-        .select('id')
+        .select('id, is_profile_complete, account_status')
         .eq('id', currentUser.id)
-        .single();
+        .maybeSingle();
 
       if (existingStudent) {
-        // Update existing student
+        // Update existing student without resetting active completion
         const { error: updateError } = await supabase
           .from('students')
           .update({
             college_id: normalizedCollegeId,
             auth_provider: 'oauth',
-            account_status: 'pending_profile',
+            account_status: existingStudent.account_status || 'pending_profile',
             college_id_last_changed_at: new Date().toISOString(),
-            is_profile_complete: false,
+            is_profile_complete: existingStudent.is_profile_complete ?? false,
             updated_at: new Date().toISOString(),
           })
           .eq('id', currentUser.id);
@@ -321,7 +337,7 @@ export default function OAuthCollegeIdSetup() {
 
   return (
     <>
-      {!isSignupFlow && !isLoginIntroDone && (
+      {loginDecision === 'home' && !isLoginIntroDone && (
         <IntroOverlay
           onDone={() => setIsLoginIntroDone(true)}
           introText="Welcome to Igniter Club X GMIT"
@@ -351,14 +367,14 @@ export default function OAuthCollegeIdSetup() {
             </p>
           </div>
 
-          {isCheckingAccount || (!isSignupFlow && !isLoginIntroDone) ? (
+          {isCheckingAccount || (loginDecision === 'home' && !isLoginIntroDone) ? (
             <div className="py-10 text-center">
               <div className="mx-auto mb-4 h-8 w-8 rounded-full border-2 border-white/20 border-t-ignite-400 animate-spin" />
               <p className="text-sm text-dark-300">
-                {!isSignupFlow && !isLoginIntroDone ? 'Preparing your login...' : 'Checking your account...'}
+                {loginDecision === 'home' ? 'Welcome back! Preparing your dashboard...' : 'Detecting your account...'}
               </p>
             </div>
-          ) : !isSignupFlow && loginDecision === 'home' ? (
+          ) : loginDecision === 'home' ? (
             <div className="py-10 text-center">
               <div className="mx-auto mb-4 h-8 w-8 rounded-full border-2 border-white/20 border-t-ignite-400 animate-spin" />
               <p className="text-sm text-dark-300">Finishing login...</p>

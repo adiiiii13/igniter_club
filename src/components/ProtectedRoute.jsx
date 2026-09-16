@@ -6,6 +6,7 @@ import StudentLayoutSkeleton from './student/StudentLayoutSkeleton';
 export default function ProtectedRoute({ children, requireProfileComplete = false }) {
   const location = useLocation();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAdminUser, setIsAdminUser] = useState(false);
   const [isProfileComplete, setIsProfileComplete] = useState(false);
   const [hasCollegeId, setHasCollegeId] = useState(false);
   const [accountStatus, setAccountStatus] = useState('pending_profile');
@@ -18,15 +19,39 @@ export default function ProtectedRoute({ children, requireProfileComplete = fals
         setIsLoading(true);
       }
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: sessionData } = await supabase.auth.getSession();
+        let user = sessionData?.session?.user || null;
+
+        if (!user) {
+          const { data } = await supabase.auth.getUser();
+          user = data?.user || null;
+        }
 
         if (!user) {
           setIsAuthenticated(false);
+          setIsAdminUser(false);
           setIsLoading(false);
           return;
         }
 
         setIsAuthenticated(true);
+
+        // Check if admin user
+        const { data: adminRecord } = await supabase
+          .from('admins')
+          .select('id, role')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        const isKnownAdmin = ['noreplay.gkk26@gmail.com'].includes(
+          (user.email || '').trim().toLowerCase()
+        );
+
+        if (adminRecord || isKnownAdmin) {
+          setIsAdminUser(true);
+          setIsLoading(false);
+          return;
+        }
 
         // Check student profile data
         const { data, error } = await supabase
@@ -65,17 +90,14 @@ export default function ProtectedRoute({ children, requireProfileComplete = fals
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'INITIAL_SESSION') return; // Prevent aborting React transitions!
       setIsAuthenticated(!!session?.user);
-      if (event !== 'INITIAL_SESSION') {
-        checkAuth(false);
-      }
+      checkAuth(false);
     });
 
     return () => {
       subscription?.unsubscribe();
     };
-  }, [location.pathname, requireProfileComplete, hasInitialized]);
+  }, [requireProfileComplete, hasInitialized]);
 
   if (isLoading) {
     return <StudentLayoutSkeleton />;
@@ -83,6 +105,10 @@ export default function ProtectedRoute({ children, requireProfileComplete = fals
 
   if (!isAuthenticated) {
     return <Navigate to="/Parallax-website-main/" replace />;
+  }
+
+  if (isAdminUser) {
+    return <Navigate to="/admin/dashboard" replace />;
   }
 
   if (accountStatus === 'locked') {

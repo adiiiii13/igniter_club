@@ -1,11 +1,85 @@
+-- =====================================================================
 -- Ignite Club Supabase Database Schema
--- This schema covers all current functionality as of April 4, 2026
+-- Production-Ready Schema & Policies for Students & Admin Panels
+-- =====================================================================
 
--- =====================================================================
--- 1. STUDENTS TABLE (Profile & Account Management)
--- =====================================================================
--- Extends Supabase auth.users for student-specific data
-CREATE TABLE IF NOT EXISTS students (
+-- 1. ADMINS & WHITELIST TABLES
+CREATE TABLE IF NOT EXISTS public.admin_whitelist (
+  email VARCHAR(255) PRIMARY KEY,
+  role VARCHAR(50) DEFAULT 'super_admin',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO public.admin_whitelist (email, role)
+VALUES 
+  ('noreplay.gkk26@gmail.com', 'super_admin')
+ON CONFLICT (email) DO UPDATE SET role = 'super_admin';
+
+CREATE TABLE IF NOT EXISTS public.admins (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  full_name VARCHAR(255),
+  role VARCHAR(50) DEFAULT 'admin', -- 'admin', 'super_admin'
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_admins_email ON public.admins(email);
+
+-- 2. HELPER FUNCTION: is_admin (Checks admin_whitelist directly to avoid recursion)
+CREATE OR REPLACE FUNCTION public.is_admin(user_id UUID DEFAULT auth.uid())
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.admin_whitelist w
+    JOIN auth.users u ON lower(u.email) = lower(w.email)
+    WHERE u.id = user_id
+  );
+$$;
+
+-- 3. AUTO-PROVISIONING TRIGGER ON auth.users (Grants admin automatically upon login/signup)
+CREATE OR REPLACE FUNCTION public.handle_new_admin_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  matched_role VARCHAR(50);
+BEGIN
+  SELECT role INTO matched_role
+  FROM public.admin_whitelist
+  WHERE lower(email) = lower(NEW.email);
+
+  IF matched_role IS NOT NULL THEN
+    INSERT INTO public.admins (id, email, full_name, role)
+    VALUES (
+      NEW.id,
+      lower(NEW.email),
+      COALESCE(NEW.raw_user_meta_data->>'full_name', 'Club Administrator'),
+      matched_role
+    )
+    ON CONFLICT (id) DO UPDATE
+    SET role = EXCLUDED.role,
+        updated_at = NOW();
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_auth_user_admin_trigger ON auth.users;
+CREATE TRIGGER on_auth_user_admin_trigger
+AFTER INSERT OR UPDATE OF email ON auth.users
+FOR EACH ROW
+EXECUTE FUNCTION public.handle_new_admin_user();
+
+-- 3. STUDENTS TABLE (Profile & Account Management)
+CREATE TABLE IF NOT EXISTS public.students (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email VARCHAR(255) NOT NULL UNIQUE,
   full_name VARCHAR(255),
@@ -17,17 +91,17 @@ CREATE TABLE IF NOT EXISTS students (
   phone_number VARCHAR(20),
   
   -- Academic Information
-  joining_year INTEGER, -- Year student joined college (e.g., 2024)
+  joining_year INTEGER, -- e.g., 2024
   study_year VARCHAR(50), -- 1st Year, 2nd Year, 3rd Year, 4th Year
   semester VARCHAR(50), -- 1st Semester through 8th Semester
-  department VARCHAR(120), -- Branch/Department (e.g., CSE, ECE, Mechanical)
+  department VARCHAR(120), -- Branch (e.g., Computer Science & Engineering)
   
   -- Profile
-  avatar VARCHAR(500), -- Emoji or URL (e.g., '👨‍🎓')
+  avatar VARCHAR(500) DEFAULT '👨‍🎓',
   role VARCHAR(50) DEFAULT 'member', -- member, moderator, organizer
   
   -- Profile Completion Status
-  is_profile_complete BOOLEAN DEFAULT FALSE, -- Triggers redirect in app
+  is_profile_complete BOOLEAN DEFAULT FALSE,
   
   -- Statistics (cached for performance)
   events_attended INTEGER DEFAULT 0,
@@ -38,340 +112,365 @@ CREATE TABLE IF NOT EXISTS students (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-ALTER TABLE students
-  ADD COLUMN IF NOT EXISTS account_status VARCHAR(20) NOT NULL DEFAULT 'pending_profile';
-
-ALTER TABLE students
-  ADD COLUMN IF NOT EXISTS auth_provider VARCHAR(20) NOT NULL DEFAULT 'oauth';
-
-ALTER TABLE students
-  ADD COLUMN IF NOT EXISTS college_id_last_changed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
-
-ALTER TABLE students
-  ADD COLUMN IF NOT EXISTS password_changed_at TIMESTAMP WITH TIME ZONE;
-
-ALTER TABLE students
-  ADD COLUMN IF NOT EXISTS department VARCHAR(120);
-
-ALTER TABLE students
-  ALTER COLUMN avatar TYPE VARCHAR(500);
-
+-- Constraints on students
 DO $$
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'students_account_status_chk'
-  ) THEN
-    ALTER TABLE students
-      ADD CONSTRAINT students_account_status_chk
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'students_account_status_chk') THEN
+    ALTER TABLE public.students ADD CONSTRAINT students_account_status_chk
       CHECK (account_status IN ('pending_profile', 'active', 'locked'));
   END IF;
-END $$;
 
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'students_auth_provider_chk'
-  ) THEN
-    ALTER TABLE students
-      ADD CONSTRAINT students_auth_provider_chk
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'students_auth_provider_chk') THEN
+    ALTER TABLE public.students ADD CONSTRAINT students_auth_provider_chk
       CHECK (auth_provider IN ('manual', 'oauth'));
   END IF;
-END $$;
 
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'students_college_id_format_chk'
-  ) THEN
-    ALTER TABLE students
-      ADD CONSTRAINT students_college_id_format_chk
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'students_college_id_format_chk') THEN
+    ALTER TABLE public.students ADD CONSTRAINT students_college_id_format_chk
       CHECK (college_id ~ '^GMIT/[0-9]{4}/[0-9]{4}$');
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'students_email_lowercase_chk') THEN
+    ALTER TABLE public.students ADD CONSTRAINT students_email_lowercase_chk
+      CHECK (email = lower(email));
   END IF;
 END $$;
 
-CREATE OR REPLACE FUNCTION enforce_students_update_rules()
+-- Trigger: Enforce students update rules
+CREATE OR REPLACE FUNCTION public.enforce_students_update_rules()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 AS $$
 BEGIN
-  -- Email is immutable once account is created.
+  -- Email is immutable once account is created
   IF NEW.email IS DISTINCT FROM OLD.email THEN
     RAISE EXCEPTION 'Email cannot be changed.';
   END IF;
 
-  -- College ID can be changed only once every 24 hours.
+  -- College ID can only be changed once every 24 hours (unless setting initial ID)
   IF NEW.college_id IS DISTINCT FROM OLD.college_id THEN
-    IF OLD.college_id_last_changed_at IS NOT NULL
+    IF OLD.college_id IS NOT NULL AND OLD.college_id <> '' AND OLD.college_id_last_changed_at IS NOT NULL
        AND NOW() - OLD.college_id_last_changed_at < INTERVAL '24 hours' THEN
       RAISE EXCEPTION 'College ID can only be changed once every 24 hours.';
     END IF;
     NEW.college_id_last_changed_at = NOW();
   END IF;
 
+  NEW.updated_at = NOW();
   RETURN NEW;
 END;
 $$;
 
-DROP TRIGGER IF EXISTS students_update_rules_trg ON students;
+DROP TRIGGER IF EXISTS students_update_rules_trg ON public.students;
 CREATE TRIGGER students_update_rules_trg
-BEFORE UPDATE ON students
+BEFORE UPDATE ON public.students
 FOR EACH ROW
-EXECUTE FUNCTION enforce_students_update_rules();
+EXECUTE FUNCTION public.enforce_students_update_rules();
 
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'students_email_lowercase_chk'
-  ) THEN
-    ALTER TABLE students
-      ADD CONSTRAINT students_email_lowercase_chk
-      CHECK (email = lower(email));
-  END IF;
-END $$;
+-- Indexes for students
+CREATE INDEX IF NOT EXISTS idx_students_college_id ON public.students(college_id);
+CREATE INDEX IF NOT EXISTS idx_students_email ON public.students(email);
+CREATE INDEX IF NOT EXISTS idx_students_is_profile_complete ON public.students(is_profile_complete);
+CREATE INDEX IF NOT EXISTS idx_students_account_status ON public.students(account_status);
 
--- Indexes for common queries
-CREATE INDEX IF NOT EXISTS idx_students_college_id ON students(college_id);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_students_college_id_unique ON students(college_id);
-CREATE INDEX IF NOT EXISTS idx_students_email ON students(email);
-CREATE INDEX IF NOT EXISTS idx_students_is_profile_complete ON students(is_profile_complete);
-CREATE INDEX IF NOT EXISTS idx_students_account_status ON students(account_status);
-
--- =====================================================================
--- 2. ANNOUNCEMENTS TABLE (News & Updates)
--- =====================================================================
--- Stores club-wide announcements and updates
-CREATE TABLE IF NOT EXISTS announcements (
+-- 4. ANNOUNCEMENTS TABLE (News & Updates)
+CREATE TABLE IF NOT EXISTS public.announcements (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title VARCHAR(255) NOT NULL,
   description TEXT NOT NULL,
-  author_id UUID REFERENCES students(id) ON DELETE SET NULL,
-  
-  -- Content
-  category VARCHAR(100), -- event, milestone, general, etc.
+  author_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  category VARCHAR(100) DEFAULT 'general', -- event, milestone, general, workshop
   is_pinned BOOLEAN DEFAULT FALSE,
-  
-  -- Visibility
   is_published BOOLEAN DEFAULT TRUE,
-  
-  -- Timestamps
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  expires_at TIMESTAMP WITH TIME ZONE -- Optional expiration
+  expires_at TIMESTAMP WITH TIME ZONE
 );
 
-CREATE INDEX IF NOT EXISTS idx_announcements_created_at ON announcements(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_announcements_published ON announcements(is_published);
+CREATE INDEX IF NOT EXISTS idx_announcements_created_at ON public.announcements(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_announcements_published ON public.announcements(is_published);
 
--- =====================================================================
--- 3. EVENTS TABLE (Club Events & Workshops)
--- =====================================================================
--- Stores all club events, workshops, hackathons, etc.
-CREATE TABLE IF NOT EXISTS events (
+-- 5. EVENTS TABLE (Club Events & Workshops)
+CREATE TABLE IF NOT EXISTS public.events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name VARCHAR(255) NOT NULL,
   description TEXT,
-  
-  -- Date & Time
-  date TIMESTAMP WITH TIME ZONE NOT NULL, -- Event date/time
-  end_date TIMESTAMP WITH TIME ZONE, -- Event end time
-  
-  -- Location
-  location VARCHAR(255), -- Building/Room (e.g., "Room 301")
+  date TIMESTAMP WITH TIME ZONE NOT NULL,
+  end_date TIMESTAMP WITH TIME ZONE,
+  location VARCHAR(255),
   is_online BOOLEAN DEFAULT FALSE,
-  meeting_link VARCHAR(500), -- Zoom/Teams link if online
-  
-  -- Event Details
-  created_by UUID REFERENCES students(id) ON DELETE SET NULL,
-  capacity INTEGER, -- Max registrations (NULL = unlimited)
-  current_registrations INTEGER DEFAULT 0, -- Cached count
+  meeting_link VARCHAR(500),
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  capacity INTEGER,
+  current_registrations INTEGER DEFAULT 0,
   status VARCHAR(50) DEFAULT 'upcoming', -- upcoming, ongoing, completed, cancelled
-  
-  -- Timestamps
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_events_date ON events(date ASC);
-CREATE INDEX IF NOT EXISTS idx_events_status ON events(status);
-CREATE INDEX IF NOT EXISTS idx_events_is_online ON events(is_online);
+CREATE INDEX IF NOT EXISTS idx_events_date ON public.events(date ASC);
+CREATE INDEX IF NOT EXISTS idx_events_status ON public.events(status);
+CREATE INDEX IF NOT EXISTS idx_events_is_online ON public.events(is_online);
 
--- =====================================================================
--- 4. EVENT REGISTRATIONS TABLE (Student-Event Mapping)
--- =====================================================================
--- Tracks which students registered for which events
-CREATE TABLE IF NOT EXISTS event_registrations (
+-- 6. EVENT REGISTRATIONS TABLE (Student-Event Mapping)
+CREATE TABLE IF NOT EXISTS public.event_registrations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  student_id UUID NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-  event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
-  
-  -- Registration Status
+  student_id UUID NOT NULL REFERENCES public.students(id) ON DELETE CASCADE,
+  event_id UUID NOT NULL REFERENCES public.events(id) ON DELETE CASCADE,
   status VARCHAR(50) DEFAULT 'registered', -- registered, attended, cancelled
-  
-  -- Timestamps
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  
-  -- Unique constraint: One registration per student per event
   UNIQUE(student_id, event_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_event_registrations_student_id ON event_registrations(student_id);
-CREATE INDEX IF NOT EXISTS idx_event_registrations_event_id ON event_registrations(event_id);
-CREATE INDEX IF NOT EXISTS idx_event_registrations_status ON event_registrations(status);
+CREATE INDEX IF NOT EXISTS idx_event_registrations_student_id ON public.event_registrations(student_id);
+CREATE INDEX IF NOT EXISTS idx_event_registrations_event_id ON public.event_registrations(event_id);
+CREATE INDEX IF NOT EXISTS idx_event_registrations_status ON public.event_registrations(status);
 
--- =====================================================================
--- 5. BADGES TABLE (Achievement Definitions)
--- =====================================================================
--- Stores badge templates and definitions
-CREATE TABLE IF NOT EXISTS badges (
+-- 7. BADGES TABLE (Achievement Definitions)
+CREATE TABLE IF NOT EXISTS public.badges (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name VARCHAR(100) NOT NULL UNIQUE,
   description TEXT,
   icon VARCHAR(100), -- Emoji or URL
-  event UUID REFERENCES events(id) ON DELETE SET NULL, -- Associated event
-  
-  -- Timestamps
+  event VARCHAR(255),
+  event_id UUID REFERENCES public.events(id) ON DELETE SET NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- =====================================================================
--- 6. STUDENT BADGES TABLE (Student-Badge Mapping)
--- =====================================================================
--- Tracks which students have earned which badges
-CREATE TABLE IF NOT EXISTS student_badges (
+-- 8. STUDENT BADGES TABLE (Student-Badge Mapping)
+CREATE TABLE IF NOT EXISTS public.student_badges (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  student_id UUID NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-  badge_id UUID NOT NULL REFERENCES badges(id) ON DELETE CASCADE,
-  
-  -- Achievement Timestamp
+  student_id UUID NOT NULL REFERENCES public.students(id) ON DELETE CASCADE,
+  badge_id UUID NOT NULL REFERENCES public.badges(id) ON DELETE CASCADE,
   earned TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  
-  -- Timestamps
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  
-  -- Unique constraint: One instance of each badge per student
   UNIQUE(student_id, badge_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_student_badges_student_id ON student_badges(student_id);
-CREATE INDEX IF NOT EXISTS idx_student_badges_badge_id ON student_badges(badge_id);
+CREATE INDEX IF NOT EXISTS idx_student_badges_student_id ON public.student_badges(student_id);
+CREATE INDEX IF NOT EXISTS idx_student_badges_badge_id ON public.student_badges(badge_id);
 
--- =====================================================================
--- 7. ADMINS TABLE (Admin Access & Management)
--- =====================================================================
--- Optional table for admin users (extends auth.users)
-CREATE TABLE IF NOT EXISTS admins (
-  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  email VARCHAR(255) NOT NULL UNIQUE,
-  full_name VARCHAR(255),
-  role VARCHAR(50) DEFAULT 'admin', -- admin, super_admin
-  
-  -- Timestamps
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+-- 9. BANNER MODALS TABLE (Admin-Controllable Public Announcement Modal)
+CREATE TABLE IF NOT EXISTS public.banner_modals (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL DEFAULT 'Passing the Torch Event',
+  subtitle TEXT DEFAULT 'As we, the current 4th-year members, prepare to move forward in our journey, it is time to entrust the future of the Igniters Club to you...',
+  badge_text TEXT DEFAULT 'Official Announcement',
+  audience TEXT DEFAULT 'Dear Juniors [2nd & 3rd Year],',
+  highlight_title TEXT DEFAULT 'The positions open for succession are:',
+  highlight_items JSONB DEFAULT '["President", "Vice President", "Leader", "Photographer", "Video Editor"]'::jsonb,
+  highlight_box TEXT DEFAULT 'This event marks an important milestone in ensuring the continuity of the Igniters Club''s vision and activities.',
+  urgency_note TEXT DEFAULT 'Apply before this Sunday',
+  sign_off TEXT DEFAULT 'Warm regards,\nIgniters Club – 4th Year Team',
+  image_url TEXT,
+  cta_text TEXT DEFAULT 'Apply Over This Link',
+  cta_url TEXT DEFAULT 'https://forms.gle/WN2E6EkaNAXygpPP6',
+  secondary_cta_text TEXT DEFAULT 'Dismiss',
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_admins_email ON admins(email);
+-- Banners Storage Bucket
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'banners',
+  'banners',
+  true,
+  10485760,
+  ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml']
+)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+-- 10. CACHED COUNTERS TRIGGERS
+CREATE OR REPLACE FUNCTION public.update_event_registrations_count()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    UPDATE public.events
+    SET current_registrations = current_registrations + 1
+    WHERE id = NEW.event_id;
+  ELSIF TG_OP = 'DELETE' THEN
+    UPDATE public.events
+    SET current_registrations = GREATEST(0, current_registrations - 1)
+    WHERE id = OLD.event_id;
+  END IF;
+  RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS event_registrations_count_trg ON public.event_registrations;
+CREATE TRIGGER event_registrations_count_trg
+AFTER INSERT OR DELETE ON public.event_registrations
+FOR EACH ROW
+EXECUTE FUNCTION public.update_event_registrations_count();
+
+CREATE OR REPLACE FUNCTION public.update_student_badges_count()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    UPDATE public.students
+    SET badges_earned = badges_earned + 1
+    WHERE id = NEW.student_id;
+  ELSIF TG_OP = 'DELETE' THEN
+    UPDATE public.students
+    SET badges_earned = GREATEST(0, badges_earned - 1)
+    WHERE id = OLD.student_id;
+  END IF;
+  RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS student_badges_count_trg ON public.student_badges;
+CREATE TRIGGER student_badges_count_trg
+AFTER INSERT OR DELETE ON public.student_badges
+FOR EACH ROW
+EXECUTE FUNCTION public.update_student_badges_count();
 
 -- =====================================================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
 -- =====================================================================
+ALTER TABLE public.students ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.announcements ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.event_registrations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.badges ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.student_badges ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.admins ENABLE ROW LEVEL SECURITY;
 
--- Enable RLS on all tables
-ALTER TABLE students ENABLE ROW LEVEL SECURITY;
-ALTER TABLE announcements ENABLE ROW LEVEL SECURITY;
-ALTER TABLE events ENABLE ROW LEVEL SECURITY;
-ALTER TABLE event_registrations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE badges ENABLE ROW LEVEL SECURITY;
-ALTER TABLE student_badges ENABLE ROW LEVEL SECURITY;
-ALTER TABLE admins ENABLE ROW LEVEL SECURITY;
+-- Drop old policies to allow idempotency
+DROP POLICY IF EXISTS "Anyone can select students" ON public.students;
+DROP POLICY IF EXISTS "Students can view all student profiles" ON public.students;
+DROP POLICY IF EXISTS "Students can insert their own profile" ON public.students;
+DROP POLICY IF EXISTS "Students can update their own profile" ON public.students;
+DROP POLICY IF EXISTS "Admins can delete students" ON public.students;
 
-DROP POLICY IF EXISTS "Students can view all student profiles" ON students;
-DROP POLICY IF EXISTS "Students can update their own profile" ON students;
-DROP POLICY IF EXISTS "Students can insert their own profile" ON students;
-DROP POLICY IF EXISTS "Anyone can view published announcements" ON announcements;
-DROP POLICY IF EXISTS "Anyone can view events" ON events;
-DROP POLICY IF EXISTS "Students can view their own registrations" ON event_registrations;
-DROP POLICY IF EXISTS "Students can create registrations" ON event_registrations;
-DROP POLICY IF EXISTS "Anyone can view badges" ON badges;
-DROP POLICY IF EXISTS "Students can view their own earned badges" ON student_badges;
-DROP POLICY IF EXISTS "Only admins can view admin profiles" ON admins;
+DROP POLICY IF EXISTS "Anyone can view published announcements" ON public.announcements;
+DROP POLICY IF EXISTS "Admins and authors can insert announcements" ON public.announcements;
+DROP POLICY IF EXISTS "Admins and authors can update announcements" ON public.announcements;
+DROP POLICY IF EXISTS "Admins and authors can delete announcements" ON public.announcements;
 
--- Students: Users can view all students, but only update their own
-CREATE POLICY "Students can view all student profiles" ON students FOR SELECT USING (TRUE);
-CREATE POLICY "Students can update their own profile" ON students FOR UPDATE 
-  USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
-CREATE POLICY "Students can insert their own profile" ON students FOR INSERT 
-  WITH CHECK (
-    auth.uid() = id
-    AND auth.jwt() ->> 'email' = email
-  );
+DROP POLICY IF EXISTS "Anyone can view events" ON public.events;
+DROP POLICY IF EXISTS "Admins and organizers can insert events" ON public.events;
+DROP POLICY IF EXISTS "Admins and organizers can update events" ON public.events;
+DROP POLICY IF EXISTS "Admins can delete events" ON public.events;
 
--- Announcements: Everyone can view published announcements
-CREATE POLICY "Anyone can view published announcements" ON announcements FOR SELECT 
-  USING (is_published = TRUE);
+DROP POLICY IF EXISTS "Students can view their own registrations" ON public.event_registrations;
+DROP POLICY IF EXISTS "Students can create registrations" ON public.event_registrations;
+DROP POLICY IF EXISTS "Students can cancel registrations" ON public.event_registrations;
 
--- Events: Everyone can view all events
-CREATE POLICY "Anyone can view events" ON events FOR SELECT USING (TRUE);
+DROP POLICY IF EXISTS "Anyone can view badges" ON public.badges;
+DROP POLICY IF EXISTS "Admins can manage badges" ON public.badges;
 
--- Event Registrations: Users can view only their own registrations
-CREATE POLICY "Students can view their own registrations" ON event_registrations FOR SELECT 
-  USING (auth.uid() = student_id);
-CREATE POLICY "Students can create registrations" ON event_registrations FOR INSERT 
-  WITH CHECK (auth.uid() = student_id);
+DROP POLICY IF EXISTS "Students and admins can view earned badges" ON public.student_badges;
+DROP POLICY IF EXISTS "Students can view their own earned badges" ON public.student_badges;
+DROP POLICY IF EXISTS "Admins can assign badges" ON public.student_badges;
 
--- Badges: Everyone can view badges
-CREATE POLICY "Anyone can view badges" ON badges FOR SELECT USING (TRUE);
+DROP POLICY IF EXISTS "Only admins can view admin profiles" ON public.admins;
+DROP POLICY IF EXISTS "Admins can view admins" ON public.admins;
+DROP POLICY IF EXISTS "Super admins can manage admins" ON public.admins;
 
--- Student Badges: Users can view only their own earned badges
-CREATE POLICY "Students can view their own earned badges" ON student_badges FOR SELECT 
-  USING (auth.uid() = student_id);
+-- Students policies
+CREATE POLICY "Anyone can select students" ON public.students FOR SELECT
+  USING (true);
 
--- Admins: Only admins can view admin table
-CREATE POLICY "Only admins can view admin profiles" ON admins FOR SELECT 
-  USING (auth.uid() IN (SELECT id FROM admins));
+CREATE POLICY "Students can insert their own profile" ON public.students FOR INSERT TO authenticated
+  WITH CHECK (auth.uid() = id OR public.is_admin(auth.uid()));
+
+CREATE POLICY "Students can update their own profile" ON public.students FOR UPDATE TO authenticated
+  USING (auth.uid() = id OR public.is_admin(auth.uid()))
+  WITH CHECK (auth.uid() = id OR public.is_admin(auth.uid()));
+
+CREATE POLICY "Admins can delete students" ON public.students FOR DELETE TO authenticated
+  USING (public.is_admin(auth.uid()));
+
+-- Announcements policies
+CREATE POLICY "Anyone can view published announcements" ON public.announcements FOR SELECT
+  USING (is_published = true OR public.is_admin(auth.uid()));
+
+CREATE POLICY "Admins and authors can insert announcements" ON public.announcements FOR INSERT TO authenticated
+  WITH CHECK (public.is_admin(auth.uid()) OR auth.uid() = author_id);
+
+CREATE POLICY "Admins and authors can update announcements" ON public.announcements FOR UPDATE TO authenticated
+  USING (public.is_admin(auth.uid()) OR auth.uid() = author_id);
+
+CREATE POLICY "Admins and authors can delete announcements" ON public.announcements FOR DELETE TO authenticated
+  USING (public.is_admin(auth.uid()));
+
+-- Events policies
+CREATE POLICY "Anyone can view events" ON public.events FOR SELECT
+  USING (true);
+
+CREATE POLICY "Admins and organizers can insert events" ON public.events FOR INSERT TO authenticated
+  WITH CHECK (public.is_admin(auth.uid()) OR auth.uid() = created_by);
+
+CREATE POLICY "Admins and organizers can update events" ON public.events FOR UPDATE TO authenticated
+  USING (public.is_admin(auth.uid()) OR auth.uid() = created_by);
+
+CREATE POLICY "Admins can delete events" ON public.events FOR DELETE TO authenticated
+  USING (public.is_admin(auth.uid()));
+
+-- Event Registrations policies
+CREATE POLICY "Students can view their own registrations" ON public.event_registrations FOR SELECT TO authenticated
+  USING (auth.uid() = student_id OR public.is_admin(auth.uid()));
+
+CREATE POLICY "Students can create registrations" ON public.event_registrations FOR INSERT TO authenticated
+  WITH CHECK (auth.uid() = student_id OR public.is_admin(auth.uid()));
+
+CREATE POLICY "Students can cancel registrations" ON public.event_registrations FOR DELETE TO authenticated
+  USING (auth.uid() = student_id OR public.is_admin(auth.uid()));
+
+-- Badges policies
+CREATE POLICY "Anyone can view badges" ON public.badges FOR SELECT
+  USING (true);
+
+CREATE POLICY "Admins can manage badges" ON public.badges FOR ALL TO authenticated
+  USING (public.is_admin(auth.uid()))
+  WITH CHECK (public.is_admin(auth.uid()));
+
+-- Student Badges policies
+CREATE POLICY "Students and admins can view earned badges" ON public.student_badges FOR SELECT TO authenticated
+  USING (auth.uid() = student_id OR public.is_admin(auth.uid()));
+
+CREATE POLICY "Admins can assign badges" ON public.student_badges FOR ALL TO authenticated
+  USING (public.is_admin(auth.uid()))
+  WITH CHECK (public.is_admin(auth.uid()));
+
+-- Admins table policies
+CREATE POLICY "Users can view their own admin profile" ON public.admins FOR SELECT TO authenticated
+  USING (auth.uid() = id);
+
+CREATE POLICY "Super admins can view all admins" ON public.admins FOR SELECT TO authenticated
+  USING (public.is_admin(auth.uid()));
+
+CREATE POLICY "Super admins can manage admins" ON public.admins FOR ALL TO authenticated
+  USING (public.is_admin(auth.uid()))
+  WITH CHECK (public.is_admin(auth.uid()));
 
 -- =====================================================================
--- INITIAL DATA (Optional)
+-- INITIAL SEED DATA (Executed in setup-db.js)
 -- =====================================================================
--- You can uncomment and modify this section to add initial data
 
--- INSERT INTO badges (name, description, icon) VALUES
--- ('Hackathon Champion', 'Won a hackathon', '🏆'),
--- ('Event Regular', 'Attended 5+ events', '⭐'),
--- ('Workshop Master', 'Completed all workshops', '📚'),
--- ('Community Leader', 'Organized an event', '👑');
+-- Badges Seed:
+-- INSERT INTO public.badges (name, description, icon, event) VALUES
+-- ('Early Igniter', 'Joined Igniter Club during the foundation phase', '🚀', 'Igniter Onboarding 2026'),
+-- ('Hackathon Contender', 'Competed in an official Igniter Club hackathon', '🏆', 'Annual Hackathon'),
+-- ('Workshop Explorer', 'Completed a hands-on technical workshop or masterclass', '⚡', 'Web & AI Build Sprint'),
+-- ('Open Source Builder', 'Contributed code, docs, or reviews to club open source repositories', '🌟', 'Open Source Guild'),
+-- ('Community Leader', 'Organized an event or mentored junior members', '🔥', 'Igniter Community Circle');
 
--- =====================================================================
--- SCHEMA DOCUMENTATION
--- =====================================================================
--- 
--- TABLE SIZES & RETENTION:
--- - students: Main user profiles, ~100-1000 rows
--- - announcements: ~5-50 rows (archived after expiry)
--- - events: ~10-100 rows (archived after completion)
--- - event_registrations: 100s-1000s of rows (linked to events)
--- - badges: ~5-20 rows (static achievement definitions)
--- - student_badges: 10s-100s of rows (incremental growth)
--- - admins: ~2-10 rows (static admin list)
---
--- KEY FIELDS FOR APP LOGIC:
--- - students.is_profile_complete: Controls redirect in ProtectedRoute
--- - students.college_id: Required post-OAuth verification
--- - students.account_status: Primary lock/unlock gate (pending_profile, active, locked)
--- - students.college_id_last_changed_at: Enforces 24-hour interval between changes
--- - students.password_changed_at: Used by manual accounts for 5-minute password cooldown
--- - students.auth_provider: Distinguishes manual vs OAuth signup behavior
--- - students row is created only after email/magic-link verification for manual signup
--- - events.date: Sorting for "upcoming events"
--- - event_registrations: Tracks user engagement
--- - student_badges: User achievements & gamification
---
--- RATE LIMITING: Implemented at Supabase auth level
--- - 5 sign-ups/sign-ins per IP per 5 minutes
--- - Client-side 3s cooldown in UI components
---
--- PERFORMANCE NOTES:
--- - All tables have appropriate indexes for common queries
--- - Use cached counts (current_registrations, events_attended) to avoid N+1
--- - Consider pagination for large result sets (announcements, events)
--- - Archive old events to keep performance optimal
+-- Events Seed:
+-- INSERT INTO public.events (name, description, date, end_date, location, is_online, capacity, status) VALUES
+-- ('Igniter Induction & Orientation 2026', 'Official welcome session for new members.', NOW() + INTERVAL '5 days', NOW() + INTERVAL '5 days 2 hours', 'Auditorium Hall, GMIT Campus', FALSE, 150, 'upcoming'),
+-- ('Full-Stack Web & AI Build Sprint', 'Intensive hands-on workshop building production-ready web apps.', NOW() + INTERVAL '12 days', NOW() + INTERVAL '12 days 3 hours', 'Computer Lab 3, GMIT', FALSE, 60, 'upcoming'),
+-- ('Cloud Architecture & Open Source Masterclass', 'Live interactive session covering cloud deployment patterns.', NOW() + INTERVAL '19 days', NOW() + INTERVAL '19 days 2 hours', 'Online (Google Meet)', TRUE, 250, 'upcoming');
+
+-- Announcements Seed:
+-- INSERT INTO public.announcements (title, description, category, is_pinned, is_published) VALUES
+-- ('Igniter Club GMIT Portal is Live!', 'Welcome to our official club portal. Sign up with your GMIT College ID.', 'general', TRUE, TRUE),
+-- ('Upcoming Web & AI Build Sprint Announced', 'Join us next week in Computer Lab 3 for our hands-on workshop.', 'event', FALSE, TRUE),
+-- ('Community Circle Leads Applications Open', 'Passionate about AI, Web Development, or Cybersecurity?', 'milestone', FALSE, TRUE);

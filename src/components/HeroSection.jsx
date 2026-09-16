@@ -76,13 +76,13 @@ export default function HeroSection({ onAuthClick, isLoggedIn }) {
           {!isLoggedIn ? (
             <>
               <a
-                href="#join"
+                href="#founders"
                 className="btn-ignite px-8 py-4 text-base"
               >
                 <span className="btn-roll" aria-hidden="true">
                   <span className="btn-roll-track">
-                    <span className="btn-roll-text">✍️ Be In The Next Chapter</span>
-                    <span className="btn-roll-text clone">✍️ Be In The Next Chapter</span>
+                    <span className="btn-roll-text">✨ Meet The Founders</span>
+                    <span className="btn-roll-text clone">✨ Meet The Founders</span>
                   </span>
                 </span>
                 <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -28,7 +28,7 @@
 
 | Route | Page | Description |
 |---|---|---|
-| `/` | **Intro** | Cinematic parallax welcome screen |
+| `/` | **Intro** | Cinematic parallax welcome screen at `/welcome/` |
 | `/home` | **Landing** | Hero, About, Events & Join sections |
 | `/communities` | **Communities** | Club community groups & teams |
 | `/bikini-special` | **Bikini Special** | Special event page with 3D model showcase |
@@ -74,7 +74,7 @@ igniter_club/
 │   ├── main.jsx
 │   └── index.css
 ├── frame/                  # Scroll-scrub animation frames
-├── Parallax-website-main/  # GSAP parallax intro source
+├── welcome/                # GSAP parallax intro source
 ├── index.html
 ├── vite.config.js
 ├── tailwind.config.js

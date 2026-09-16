@@ -7,7 +7,7 @@ export default function Footer() {
     Club: [
       { label: 'About Us', href: '/about' },
       { label: 'Events', href: '/events' },
-      { label: 'Join Now', href: '/join' },
+      { label: 'Meet Founders', href: '/home#founders' },
     ],
     Connect: [
       { label: 'Instagram', href: '#' },
