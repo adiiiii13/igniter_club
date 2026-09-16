@@ -184,6 +184,202 @@ body.intro-active .wrapper {
   z-index: 2;
   will-change: transform;
 }
+
+/* Parallax Navigation Top */
+.parallax-top-nav {
+  position: absolute;
+  top: clamp(1.25rem, 3vh, 2.5rem);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 25;
+  pointer-events: auto;
+}
+
+.parallax-nav-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 20px;
+  background: rgba(10, 15, 29, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+  color: #f1f5f9;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  text-decoration: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.parallax-nav-back:hover {
+  background: rgba(244, 63, 94, 0.3);
+  border-color: rgba(244, 63, 94, 0.55);
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(244, 63, 94, 0.35);
+}
+
+/* Parallax Side Brand Layers (Left: GMIT 15, Right: JIS Group) */
+.layer-parallax-side {
+  position: absolute;
+  top: clamp(2rem, 7vh, 5.5rem);
+  z-index: 10;
+  will-change: transform;
+  transform: translate3d(0, calc(var(--scrollTop) / 2.6), 0);
+  transition: transform 0.75s cubic-bezier(0.075, 0.5, 0, 1);
+  pointer-events: auto;
+}
+
+.layer-parallax-left {
+  left: clamp(1.5rem, 4.5vw, 5rem);
+}
+
+.layer-parallax-right {
+  right: clamp(1.5rem, 4.5vw, 5rem);
+}
+
+.parallax-logo-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 18px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 14px 35px rgba(0, 0, 0, 0.45), 0 0 25px rgba(255, 255, 255, 0.15);
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease, background 0.35s ease;
+  animation: parallaxFloatLeft 5s ease-in-out infinite;
+}
+
+.layer-parallax-right .parallax-logo-badge {
+  animation: parallaxFloatRight 5.4s ease-in-out 0.8s infinite;
+}
+
+.parallax-logo-badge:hover {
+  transform: translateY(-5px) scale(1.05);
+  background: #ffffff;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.55), 0 0 35px rgba(56, 189, 248, 0.35);
+}
+
+.parallax-side-logo-img {
+  height: clamp(34px, 4.5vw, 56px);
+  width: auto;
+  object-fit: contain;
+  display: block;
+}
+
+/* Center Igniter Club Logo in Parallax */
+.parallax-center-logo-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin-bottom: calc((1vw + 1vh) * 0.8);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.parallax-center-logo-wrap::after {
+  content: '';
+  position: absolute;
+  inset: -20%;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(244, 63, 94, 0.42) 0%, rgba(244, 63, 94, 0) 72%);
+  filter: blur(28px);
+  pointer-events: none;
+  animation: centerPulse 3.5s ease-in-out infinite;
+}
+
+.parallax-center-logo-img {
+  width: clamp(95px, 11vw, 155px);
+  height: auto;
+  object-fit: contain;
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 16px 30px rgba(0, 0, 0, 0.65)) drop-shadow(0 0 24px rgba(244, 63, 94, 0.45));
+  transition: transform 0.38s cubic-bezier(0.16, 1, 0.3, 1), filter 0.38s ease;
+  animation: centerFloat 4.2s ease-in-out infinite;
+}
+
+.parallax-center-logo-wrap:hover .parallax-center-logo-img {
+  transform: scale(1.08) translateY(-4px);
+  filter: drop-shadow(0 22px 36px rgba(0, 0, 0, 0.75)) drop-shadow(0 0 40px rgba(244, 63, 94, 0.75));
+}
+
+@keyframes parallaxFloatLeft {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes parallaxFloatRight {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-9px);
+  }
+}
+
+@keyframes centerFloat {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-6px) rotate(-1deg);
+  }
+}
+
+@keyframes centerPulse {
+  0%, 100% {
+    opacity: 0.5;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.08);
+  }
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 640px) {
+  .layer-parallax-side {
+    top: 1rem;
+  }
+  .layer-parallax-left {
+    left: 0.75rem;
+  }
+  .layer-parallax-right {
+    right: 0.75rem;
+  }
+  .parallax-logo-badge {
+    padding: 6px 10px;
+    border-radius: 12px;
+  }
+  .parallax-side-logo-img {
+    height: 24px;
+  }
+  .parallax-top-nav {
+    top: 3.85rem;
+  }
+  .parallax-nav-back {
+    padding: 6px 14px;
+    font-size: 0.72rem;
+  }
+}
+
 .header::after {
   content: "";
   position: absolute;
