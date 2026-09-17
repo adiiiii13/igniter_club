@@ -4,7 +4,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { 
   FiShield, FiUsers, FiCalendar, FiBell, FiPlus, FiTrash2, 
   FiSearch, FiExternalLink, FiLogOut, FiCheckCircle, FiAlertTriangle, 
-  FiRefreshCw, FiHome, FiLock, FiAward, FiSliders, FiImage, FiEye, FiUploadCloud, FiCheck, FiArrowRight
+  FiRefreshCw, FiHome, FiLock, FiAward, FiSliders, FiImage, FiEye, FiUploadCloud, FiCheck, FiArrowRight,
+  FiEdit2, FiBookmark, FiTag, FiX, FiFilter
 } from 'react-icons/fi';
 import { supabase } from '../utils/supabase';
 import { getCurrentUserRole } from '../utils/authRole';
@@ -66,7 +67,16 @@ export default function AdminDashboard() {
     content: '',
     priority: 'general',
     is_pinned: false,
+    image_url: '',
   });
+  const [isUploadingAnnouncementImg, setIsUploadingAnnouncementImg] = useState(false);
+  const [editingAnnouncement, setEditingAnnouncement] = useState(null);
+  const [isEditingUploadingImg, setIsEditingUploadingImg] = useState(false);
+  const [announcementSearch, setAnnouncementSearch] = useState('');
+  const [announcementCategoryFilter, setAnnouncementCategoryFilter] = useState('ALL');
+  const [announcementPinnedOnly, setAnnouncementPinnedOnly] = useState(false);
+  const [announcementToDelete, setAnnouncementToDelete] = useState(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newEvent, setNewEvent] = useState({
     title: '',
     description: '',
@@ -109,7 +119,7 @@ export default function AdminDashboard() {
       ] = await Promise.all([
         supabase.from('students').select('*').order('created_at', { ascending: false }),
         supabase.from('events').select('*').order('date', { ascending: true }),
-        supabase.from('announcements').select('*').order('created_at', { ascending: false }),
+        supabase.from('announcements').select('*').order('is_pinned', { ascending: false }).order('created_at', { ascending: false }),
         supabase.from('event_registrations').select('id', { count: 'exact' }),
         supabase.from('admin_whitelist').select('*').order('created_at', { ascending: false }),
         supabase.from('admins').select('*').order('created_at', { ascending: false }),
@@ -176,8 +186,87 @@ export default function AdminDashboard() {
     navigate('/auth/admin/login', { replace: true });
   };
 
+  const handleAnnouncementImageUpload = async (file, isEdit = false) => {
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      showFeedback('error', 'Please select a valid image file (PNG, JPG, WEBP, GIF, SVG).');
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      showFeedback('error', 'Image size must be less than 10MB.');
+      return;
+    }
+
+    if (isEdit) {
+      setIsEditingUploadingImg(true);
+    } else {
+      setIsUploadingAnnouncementImg(true);
+    }
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const cleanFileName = `announcement-${Date.now()}.${fileExt}`;
+
+      // 1. Try Supabase storage bucket 'banners'
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('banners')
+        .upload(cleanFileName, file, { cacheControl: '3600', upsert: true });
+
+      if (!uploadError) {
+        const { data: { publicUrl } } = supabase.storage
+          .from('banners')
+          .getPublicUrl(cleanFileName);
+
+        if (isEdit) {
+          setEditingAnnouncement(prev => ({ ...prev, image_url: publicUrl }));
+        } else {
+          setNewAnnouncement(prev => ({ ...prev, image_url: publicUrl }));
+        }
+        showFeedback('success', 'Announcement image uploaded successfully!');
+        return;
+      }
+
+      console.warn('Supabase storage error, attempting Cloudinary fallback:', uploadError);
+
+      // 2. Fallback to Cloudinary if configured
+      if (hasCloudinaryConfig) {
+        const body = new FormData();
+        body.append('file', file);
+        body.append('upload_preset', uploadPreset);
+        const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+          method: 'POST',
+          body,
+        });
+        const result = await response.json();
+        if (response.ok && result?.secure_url) {
+          if (isEdit) {
+            setEditingAnnouncement(prev => ({ ...prev, image_url: result.secure_url }));
+          } else {
+            setNewAnnouncement(prev => ({ ...prev, image_url: result.secure_url }));
+          }
+          showFeedback('success', 'Announcement image uploaded successfully!');
+          return;
+        }
+        throw new Error(result?.error?.message || 'Cloudinary upload failed');
+      }
+
+      throw uploadError;
+    } catch (err) {
+      console.error('Failed to upload announcement image:', err);
+      showFeedback('error', 'Failed to upload image: ' + (err.message || 'Storage error'));
+    } finally {
+      if (isEdit) {
+        setIsEditingUploadingImg(false);
+      } else {
+        setIsUploadingAnnouncementImg(false);
+      }
+    }
+  };
+
   const handleCreateAnnouncement = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (!newAnnouncement.title.trim() || !newAnnouncement.content.trim()) {
       showFeedback('error', 'Please fill in title and announcement content.');
       return;
@@ -185,27 +274,89 @@ export default function AdminDashboard() {
 
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.from('announcements').insert([
-        {
-          title: newAnnouncement.title.trim(),
-          description: newAnnouncement.content.trim(),
-          category: newAnnouncement.priority || 'general',
-          is_pinned: Boolean(newAnnouncement.is_pinned),
-          is_published: true,
-          author_id: adminUser?.user?.id || null,
-        },
-      ]);
+      const payload = {
+        title: newAnnouncement.title.trim(),
+        description: newAnnouncement.content.trim(),
+        category: newAnnouncement.priority || 'general',
+        is_pinned: Boolean(newAnnouncement.is_pinned),
+        image_url: newAnnouncement.image_url?.trim() || null,
+        is_published: true,
+        author_id: adminUser?.user?.id || null,
+      };
+
+      const { data, error } = await supabase.from('announcements').insert([payload]).select().single();
 
       if (error) throw error;
 
-      showFeedback('success', 'Announcement published successfully!');
-      setNewAnnouncement({ title: '', content: '', priority: 'general', is_pinned: false });
-      await fetchDashboardData();
+      showFeedback('success', 'Announcement published and broadcasted successfully!');
+      setNewAnnouncement({ title: '', content: '', priority: 'general', is_pinned: false, image_url: '' });
+      setIsCreateModalOpen(false);
+      if (data) {
+        setAnnouncements(prev => [data, ...prev]);
+        setStats(prev => ({ ...prev, totalAnnouncements: prev.totalAnnouncements + 1 }));
+      } else {
+        await fetchDashboardData();
+      }
     } catch (err) {
       console.error('Failed to create announcement:', err);
       showFeedback('error', 'Error publishing announcement: ' + err.message);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleUpdateAnnouncement = async (e) => {
+    if (e) e.preventDefault();
+    if (!editingAnnouncement?.title?.trim() || !(editingAnnouncement?.description || editingAnnouncement?.content || '').trim()) {
+      showFeedback('error', 'Announcement title and content are required.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        title: editingAnnouncement.title.trim(),
+        description: (editingAnnouncement.description || editingAnnouncement.content || '').trim(),
+        category: editingAnnouncement.category || editingAnnouncement.priority || 'general',
+        is_pinned: Boolean(editingAnnouncement.is_pinned),
+        image_url: editingAnnouncement.image_url?.trim() || null,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error } = await supabase
+        .from('announcements')
+        .update(payload)
+        .eq('id', editingAnnouncement.id);
+
+      if (error) throw error;
+
+      setAnnouncements(prev => prev.map(a => a.id === editingAnnouncement.id ? { ...a, ...payload } : a));
+      showFeedback('success', 'Announcement updated successfully!');
+      setEditingAnnouncement(null);
+      await fetchDashboardData();
+    } catch (err) {
+      console.error('Failed to update announcement:', err);
+      showFeedback('error', 'Error updating announcement: ' + err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleTogglePinAnnouncement = async (item) => {
+    const newPinState = !item.is_pinned;
+    try {
+      setAnnouncements(prev => prev.map(a => a.id === item.id ? { ...a, is_pinned: newPinState } : a));
+      const { error } = await supabase
+        .from('announcements')
+        .update({ is_pinned: newPinState, updated_at: new Date().toISOString() })
+        .eq('id', item.id);
+
+      if (error) throw error;
+      showFeedback('success', newPinState ? 'Announcement pinned to top!' : 'Announcement unpinned.');
+    } catch (err) {
+      console.error('Failed to toggle pin:', err);
+      showFeedback('error', 'Failed to update pin state: ' + err.message);
+      await fetchDashboardData();
     }
   };
 
@@ -232,6 +383,7 @@ export default function AdminDashboard() {
       showFeedback('error', 'Error deleting announcement: ' + (err.message || 'Server error'));
     } finally {
       setDeletingAnnouncementId(null);
+      setAnnouncementToDelete(null);
     }
   };
 
@@ -460,8 +612,31 @@ export default function AdminDashboard() {
       (student.full_name || '').toLowerCase().includes(studentSearch.toLowerCase()) ||
       (student.email || '').toLowerCase().includes(studentSearch.toLowerCase()) ||
       (student.college_id || '').toLowerCase().includes(studentSearch.toLowerCase());
-    const matchesDept = deptFilter === 'ALL' || student.department === deptFilter;
+    const dept = (student.department || '').toLowerCase();
+    const matchesDept = deptFilter === 'ALL' || 
+      student.department === deptFilter ||
+      (deptFilter === 'CSE' && (dept.includes('computer') || dept.includes('cse'))) ||
+      (deptFilter === 'IT' && dept.includes('information')) ||
+      (deptFilter === 'ECE' && (dept.includes('electronics') || dept.includes('ece'))) ||
+      (deptFilter === 'ME' && (dept.includes('mechanical') || dept.includes('me'))) ||
+      (deptFilter === 'CE' && (dept.includes('civil') || dept.includes('ce')));
     return matchesSearch && matchesDept;
+  });
+
+  // Filtered announcements
+  const filteredAnnouncements = announcements.filter(item => {
+    const query = announcementSearch.toLowerCase().trim();
+    const titleMatch = (item.title || '').toLowerCase().includes(query);
+    const descMatch = (item.description || item.content || '').toLowerCase().includes(query);
+    const authorMatch = (item.author_name || '').toLowerCase().includes(query);
+    const matchesSearch = !query || titleMatch || descMatch || authorMatch;
+
+    const cat = (item.category || item.priority || 'general').toLowerCase();
+    const matchesCategory = announcementCategoryFilter === 'ALL' || cat === announcementCategoryFilter.toLowerCase();
+
+    const matchesPinned = !announcementPinnedOnly || Boolean(item.is_pinned);
+
+    return matchesSearch && matchesCategory && matchesPinned;
   });
 
   const [sidebarHovered, setSidebarHovered] = useState(false);
@@ -994,48 +1169,74 @@ export default function AdminDashboard() {
                 <table className="w-full text-left text-xs">
                   <thead className="border-b border-white/10 text-dark-400 uppercase tracking-wider font-mono">
                     <tr>
-                      <th className="pb-3 font-semibold">Student</th>
-                      <th className="pb-3 font-semibold">College ID</th>
-                      <th className="pb-3 font-semibold">Department</th>
-                      <th className="pb-3 font-semibold">Year & Sem</th>
-                      <th className="pb-3 font-semibold">Profile Status</th>
-                      <th className="pb-3 font-semibold">Joined</th>
+                      <th className="pb-3 font-semibold whitespace-nowrap">Student</th>
+                      <th className="pb-3 font-semibold whitespace-nowrap">College ID</th>
+                      <th className="pb-3 font-semibold whitespace-nowrap">Department</th>
+                      <th className="pb-3 font-semibold whitespace-nowrap">Year & Sem</th>
+                      <th className="pb-3 font-semibold whitespace-nowrap">Profile Status</th>
+                      <th className="pb-3 font-semibold whitespace-nowrap">Joined</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
-                    {filteredStudents.map(student => (
-                      <tr key={student.id} className="hover:bg-white/[0.02] transition">
-                        <td className="py-3 pr-4">
-                          <div className="flex items-center gap-2.5">
-                            <span className="w-7 h-7 rounded-full bg-dark-800 border border-white/10 flex items-center justify-center text-xs">
-                              {student.avatar || '👨‍🎓'}
-                            </span>
-                            <div>
-                              <p className="font-semibold text-white">{student.full_name || 'Not provided'}</p>
-                              <p className="text-[11px] text-dark-400">{student.email}</p>
+                    {filteredStudents.map(student => {
+                      const isAvatarUrl = typeof student.avatar === 'string' && (student.avatar.startsWith('http://') || student.avatar.startsWith('https://') || student.avatar.startsWith('data:image/'));
+                      const isAvatarEmoji = typeof student.avatar === 'string' && student.avatar.trim().length > 0 && student.avatar.trim().length <= 4;
+                      const displayDepartment = student.department ? student.department.replace(/Sceince/gi, 'Science') : '—';
+
+                      return (
+                        <tr key={student.id} className="hover:bg-white/[0.02] transition">
+                          <td className="py-3 pr-4 whitespace-nowrap">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div className="w-8 h-8 rounded-full bg-dark-800 border border-white/10 flex items-center justify-center text-xs overflow-hidden shrink-0 shadow-sm">
+                                {isAvatarUrl ? (
+                                  <img
+                                    src={student.avatar}
+                                    alt={student.full_name || 'Student avatar'}
+                                    className="w-full h-full object-cover rounded-full"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = 'none';
+                                      if (e.currentTarget.parentElement) {
+                                        e.currentTarget.parentElement.innerHTML = '<span>👨‍🎓</span>';
+                                      }
+                                    }}
+                                  />
+                                ) : (
+                                  <span>{isAvatarEmoji ? student.avatar : '👨‍🎓'}</span>
+                                )}
+                              </div>
+                              <div className="min-w-0 max-w-[220px]">
+                                <p className="font-semibold text-white truncate" title={student.full_name || 'Not provided'}>
+                                  {student.full_name || 'Not provided'}
+                                </p>
+                                <p className="text-[11px] text-dark-400 font-mono truncate" title={student.email}>
+                                  {student.email}
+                                </p>
+                              </div>
                             </div>
-                          </div>
-                        </td>
-                        <td className="py-3 font-mono text-dark-300">{student.college_id || '—'}</td>
-                        <td className="py-3 font-semibold text-ignite-300">{student.department || '—'}</td>
-                        <td className="py-3 text-dark-300">
-                          {student.study_year ? `Year ${student.study_year}` : '—'} 
-                          {student.semester ? ` • Sem ${student.semester}` : ''}
-                        </td>
-                        <td className="py-3">
-                          <span className={`inline-block px-2 py-0.5 rounded-full border text-[10px] ${
-                            student.is_profile_complete
-                              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
-                              : 'bg-dark-800 border-white/10 text-dark-400'
-                          }`}>
-                            {student.is_profile_complete ? 'Complete' : 'Pending Profile'}
-                          </span>
-                        </td>
-                        <td className="py-3 text-dark-400">
-                          {student.created_at ? new Date(student.created_at).toLocaleDateString() : '—'}
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td className="py-3 font-mono text-dark-300 whitespace-nowrap">{student.college_id || '—'}</td>
+                          <td className="py-3 font-semibold text-ignite-300 whitespace-nowrap" title={displayDepartment}>
+                            {displayDepartment}
+                          </td>
+                          <td className="py-3 text-dark-300 whitespace-nowrap">
+                            {student.study_year ? `Year ${student.study_year}` : '—'} 
+                            {student.semester ? ` • Sem ${student.semester}` : ''}
+                          </td>
+                          <td className="py-3 whitespace-nowrap">
+                            <span className={`inline-block px-2.5 py-0.5 rounded-full border text-[10px] font-medium ${
+                              student.is_profile_complete
+                                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                                : 'bg-dark-800 border-white/10 text-dark-400'
+                            }`}>
+                              {student.is_profile_complete ? 'Complete' : 'Pending Profile'}
+                            </span>
+                          </td>
+                          <td className="py-3 text-dark-400 whitespace-nowrap">
+                            {student.created_at ? new Date(student.created_at).toLocaleDateString() : '—'}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -1184,65 +1385,695 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Tab 4: Announcements */}
+        {/* Tab 4: Announcements Management */}
         {activeTab === 'announcements' && (
           <div className="space-y-6">
-            <div className="rounded-2xl border border-white/10 bg-dark-900/60 p-6 shadow-xl">
-              <h3 className="text-base font-semibold text-white mb-4">Published Club Announcements</h3>
-              {announcements.length === 0 ? (
-                <p className="text-xs text-dark-400 text-center py-6">No announcements currently published.</p>
+            {/* Top Announcements Header & Quick Actions */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-dark-900/60 border border-white/10 rounded-2xl p-5 shadow-xl">
+              <div>
+                <h3 className="text-base font-semibold text-white flex items-center gap-2">
+                  <FiBell className="text-ignite-400" />
+                  Club Announcements & Broadcasts
+                </h3>
+                <p className="text-xs text-dark-400 mt-1">
+                  Upload official club announcements, attach media banners, edit active broadcasts, and manage student alerts.
+                </p>
+              </div>
+              <div className="flex items-center gap-2.5 shrink-0">
+                <div className="hidden sm:flex items-center gap-2 text-xs font-mono">
+                  <span className="px-2.5 py-1 rounded-lg bg-dark-800 border border-white/10 text-dark-300">
+                    Total: <strong className="text-white">{announcements.length}</strong>
+                  </span>
+                  <span className="px-2.5 py-1 rounded-lg bg-purple-500/10 border border-purple-500/30 text-purple-300">
+                    📌 Pinned: <strong className="text-purple-200">{announcements.filter(a => a.is_pinned).length}</strong>
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-ignite-500 to-rose-600 hover:from-ignite-400 hover:to-rose-500 text-white font-semibold text-xs tracking-wider uppercase transition shadow-lg shadow-ignite-500/25 cursor-pointer flex items-center gap-1.5"
+                >
+                  <FiPlus className="text-sm" />
+                  <span>New Announcement</span>
+                </button>
+              </div>
+            </div>
+
+
+
+            {/* 2. Published Announcements Database & Controls */}
+            <div className="rounded-2xl border border-white/10 bg-dark-900/60 p-6 shadow-xl space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-base font-semibold text-white">
+                    Published Club Announcements ({filteredAnnouncements.length})
+                  </h3>
+                  <p className="text-xs text-dark-400">
+                    Live announcements currently visible to registered students and club members.
+                  </p>
+                </div>
+
+                {/* Filter and Search Controls */}
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <div className="relative">
+                    <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-400 text-xs" />
+                    <input
+                      type="text"
+                      placeholder="Search announcements..."
+                      value={announcementSearch}
+                      onChange={(e) => setAnnouncementSearch(e.target.value)}
+                      className="pl-8 pr-4 py-1.5 rounded-xl border border-white/10 bg-dark-800 text-xs text-white focus:outline-none focus:border-ignite-500/60 w-44 sm:w-56"
+                    />
+                  </div>
+
+                  <select
+                    value={announcementCategoryFilter}
+                    onChange={(e) => setAnnouncementCategoryFilter(e.target.value)}
+                    className="px-3 py-1.5 rounded-xl border border-white/10 bg-dark-800 text-xs text-white focus:outline-none"
+                  >
+                    <option value="ALL">All Categories</option>
+                    <option value="general">General</option>
+                    <option value="event">Event</option>
+                    <option value="workshop">Workshop</option>
+                    <option value="milestone">Milestone</option>
+                    <option value="urgent">Urgent</option>
+                    <option value="opportunity">Opportunity</option>
+                  </select>
+
+                  <button
+                    type="button"
+                    onClick={() => setAnnouncementPinnedOnly(prev => !prev)}
+                    className={`px-3 py-1.5 rounded-xl border text-xs font-medium transition cursor-pointer flex items-center gap-1 ${
+                      announcementPinnedOnly
+                        ? 'bg-purple-500/20 border-purple-500/40 text-purple-300'
+                        : 'bg-dark-800 border-white/10 text-dark-400 hover:text-white'
+                    }`}
+                  >
+                    <span>📌 Pinned</span>
+                  </button>
+                </div>
+              </div>
+
+              {filteredAnnouncements.length === 0 ? (
+                <div className="py-12 text-center rounded-xl border border-dashed border-white/10 bg-dark-800/30 space-y-3">
+                  <div className="w-12 h-12 rounded-2xl bg-dark-700/60 border border-white/10 mx-auto flex items-center justify-center text-dark-400 text-lg">
+                    <FiBell />
+                  </div>
+                  <p className="text-sm text-dark-300 font-medium">No announcements found</p>
+                  <p className="text-xs text-dark-500 max-w-sm mx-auto">
+                    {announcements.length === 0
+                      ? 'No announcements have been uploaded yet. Click below to create and broadcast your first club update!'
+                      : 'No announcements match your search filter.'}
+                  </p>
+                  {announcements.length === 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setIsCreateModalOpen(true)}
+                      className="mt-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-ignite-500 to-rose-600 hover:from-ignite-400 hover:to-rose-500 text-white text-xs font-semibold shadow-lg shadow-ignite-500/25 transition cursor-pointer flex items-center gap-2 mx-auto"
+                    >
+                      <FiPlus size={14} />
+                      <span>Create Announcement Now</span>
+                    </button>
+                  )}
+                </div>
               ) : (
-                <div className="space-y-3">
-                  {announcements.map(item => (
-                    <div key={item.id} className="p-4 rounded-xl border border-white/10 bg-dark-800/50 flex items-start justify-between gap-4">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-semibold text-white text-sm">{item.title}</h4>
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono uppercase ${
-                            item.priority === 'urgent' || item.category === 'urgent'
-                              ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                              : item.priority === 'event' || item.category === 'event'
-                              ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
-                              : item.priority === 'milestone' || item.category === 'milestone'
-                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                              : 'bg-ignite-500/20 text-ignite-300 border border-ignite-500/30'
-                          }`}>
-                            {item.category || item.priority || 'general'}
-                          </span>
-                          {item.is_pinned && (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] bg-purple-500/20 text-purple-300">
-                              📌 Pinned
-                            </span>
+                <div className="grid grid-cols-1 gap-4">
+                  {filteredAnnouncements.map(item => {
+                    const isUrgent = item.category === 'urgent' || item.priority === 'urgent';
+                    const isEvent = item.category === 'event' || item.priority === 'event';
+                    const isMilestone = item.category === 'milestone' || item.priority === 'milestone';
+                    const isWorkshop = item.category === 'workshop' || item.priority === 'workshop';
+
+                    return (
+                      <div
+                        key={item.id}
+                        className={`rounded-2xl border p-5 transition-all space-y-3 relative group ${
+                          item.is_pinned
+                            ? 'border-purple-500/30 bg-purple-950/10 shadow-lg shadow-purple-950/20'
+                            : 'border-white/10 bg-dark-800/40 hover:bg-dark-800/70 hover:border-white/20'
+                        }`}
+                      >
+                        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+                          {/* Image Banner if uploaded */}
+                          {item.image_url && (
+                            <div className="w-full lg:w-48 h-32 rounded-xl overflow-hidden border border-white/10 shrink-0 bg-black/40">
+                              <img
+                                src={item.image_url}
+                                alt={item.title}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              />
+                            </div>
+                          )}
+
+                          {/* Text Details */}
+                          <div className="flex-1 min-w-0 space-y-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span
+                                className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono uppercase tracking-wider font-semibold border ${
+                                  isUrgent
+                                    ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+                                    : isEvent
+                                    ? 'bg-blue-500/20 text-blue-300 border-blue-500/30'
+                                    : isMilestone
+                                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                                    : isWorkshop
+                                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                                    : 'bg-ignite-500/20 text-ignite-300 border border-ignite-500/30'
+                                }`}
+                              >
+                                {item.category || item.priority || 'general'}
+                              </span>
+
+                              {item.is_pinned && (
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-purple-500/20 border border-purple-500/30 text-purple-300 flex items-center gap-1">
+                                  📌 Pinned
+                                </span>
+                              )}
+
+                              <span className="text-[11px] text-dark-400 font-mono">
+                                {item.created_at ? new Date(item.created_at).toLocaleString() : ''}
+                              </span>
+                            </div>
+
+                            <h4 className="text-base font-bold text-white tracking-wide leading-snug">
+                              {item.title}
+                            </h4>
+
+                            <p className="text-xs text-dark-300 leading-relaxed whitespace-pre-line">
+                              {item.description || item.content}
+                            </p>
+
+                            <p className="text-[11px] text-dark-500 font-mono pt-1">
+                              Published by: {item.author_name || 'Club Administrator'}
+                            </p>
+                          </div>
+
+                          {/* Action Toolbar */}
+                          <div className="flex items-center lg:flex-col gap-2 shrink-0 border-t lg:border-t-0 lg:border-l border-white/5 pt-3 lg:pt-0 lg:pl-4">
+                            {/* Pin / Unpin Button */}
+                            <button
+                              type="button"
+                              onClick={() => handleTogglePinAnnouncement(item)}
+                              className={`px-3 py-1.5 rounded-xl border text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 w-full justify-center ${
+                                item.is_pinned
+                                  ? 'bg-purple-500/15 border-purple-500/30 text-purple-300 hover:bg-purple-500/25'
+                                  : 'bg-dark-800 border-white/10 text-dark-300 hover:text-white hover:bg-dark-700'
+                              }`}
+                              title={item.is_pinned ? 'Unpin Announcement' : 'Pin to Top'}
+                            >
+                              <span>📌</span>
+                              <span>{item.is_pinned ? 'Unpin' : 'Pin'}</span>
+                            </button>
+
+                            {/* Edit Button */}
+                            <button
+                              type="button"
+                              onClick={() => setEditingAnnouncement(item)}
+                              className="px-3 py-1.5 rounded-xl border border-ignite-500/30 bg-ignite-500/10 hover:bg-ignite-500/20 text-ignite-300 hover:text-white transition text-xs font-semibold cursor-pointer flex items-center gap-1.5 w-full justify-center shadow-sm shadow-ignite-500/10"
+                              title="Edit Announcement"
+                            >
+                              <FiEdit2 className="text-xs" />
+                              <span>Edit</span>
+                            </button>
+
+                            {/* Delete Button */}
+                            <button
+                              type="button"
+                              onClick={() => setAnnouncementToDelete(item)}
+                              disabled={deletingAnnouncementId === item.id}
+                              className="px-3 py-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/25 text-rose-300 hover:text-white transition disabled:opacity-50 text-xs font-semibold cursor-pointer flex items-center gap-1.5 w-full justify-center shadow-sm shadow-rose-500/10"
+                              title="Delete Announcement"
+                            >
+                              {deletingAnnouncementId === item.id ? (
+                                <>
+                                  <FiRefreshCw className="text-xs animate-spin" />
+                                  <span>Deleting...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <FiTrash2 className="text-xs" />
+                                  <span>Delete</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Create Announcement Modal */}
+            <AnimatePresence>
+              {isCreateModalOpen && (
+                <motion.div
+                  key="create-announcement-modal-overlay"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.18, ease: 'easeOut' }}
+                  className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/80"
+                  onClick={() => setIsCreateModalOpen(false)}
+                >
+                  <motion.div
+                    key="create-announcement-modal-dialog"
+                    initial={{ opacity: 0, scale: 0.96, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.96, y: 10 }}
+                    transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="relative z-10 w-full max-w-xl max-h-[90vh] flex flex-col bg-dark-900 border border-white/15 rounded-2xl shadow-2xl shadow-black/80 overflow-hidden"
+                  >
+                    <div className="flex items-center justify-between border-b border-white/10 px-6 py-4 shrink-0 bg-dark-900">
+                      <h4 className="text-base font-bold text-white flex items-center gap-2">
+                        <FiUploadCloud className="text-ignite-400" />
+                        Create & Upload New Announcement
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => setIsCreateModalOpen(false)}
+                        className="p-1.5 rounded-lg text-dark-400 hover:text-white hover:bg-white/5 transition cursor-pointer"
+                      >
+                        <FiX size={18} />
+                      </button>
+                    </div>
+
+                    <form onSubmit={handleCreateAnnouncement} className="flex-1 overflow-y-auto px-6 py-5 space-y-4 custom-scrollbar">
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-dark-300 mb-1.5">
+                          Announcement Headline / Title *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. Annual Tech Symposium & Hackathon Registrations Open!"
+                          value={newAnnouncement.title}
+                          onChange={(e) => setNewAnnouncement({ ...newAnnouncement, title: e.target.value })}
+                          className="w-full rounded-xl border border-white/10 bg-dark-800 px-4 py-2.5 text-sm text-white placeholder:text-dark-500 focus:outline-none focus:border-ignite-500/60"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-semibold uppercase tracking-wider text-dark-300 mb-1.5">
+                            Category
+                          </label>
+                          <select
+                            value={newAnnouncement.priority}
+                            onChange={(e) => setNewAnnouncement({ ...newAnnouncement, priority: e.target.value })}
+                            className="w-full rounded-xl border border-white/10 bg-dark-800 px-3 py-2 text-xs text-white focus:outline-none"
+                          >
+                            <option value="general">General Update</option>
+                            <option value="event">Event Notice</option>
+                            <option value="workshop">Workshop / Training</option>
+                            <option value="milestone">Milestone & Achievement</option>
+                            <option value="urgent">Urgent Announcement</option>
+                            <option value="opportunity">Recruitment / Opportunity</option>
+                          </select>
+                        </div>
+
+                        <div className="flex items-end pb-2">
+                          <label className="flex items-center gap-2 text-xs text-white font-medium cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={newAnnouncement.is_pinned}
+                              onChange={(e) => setNewAnnouncement({ ...newAnnouncement, is_pinned: e.target.checked })}
+                              className="rounded border-white/20 bg-dark-700 text-ignite-500 focus:ring-ignite-500 w-4 h-4 cursor-pointer"
+                            />
+                            <span>📌 Pin to top of student feed</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-dark-300 mb-1.5">
+                          Announcement Details / Content *
+                        </label>
+                        <textarea
+                          rows={4}
+                          required
+                          placeholder="Write the full announcement message for club members and students..."
+                          value={newAnnouncement.content}
+                          onChange={(e) => setNewAnnouncement({ ...newAnnouncement, content: e.target.value })}
+                          className="w-full rounded-xl border border-white/10 bg-dark-800 px-4 py-2.5 text-sm text-white placeholder:text-dark-500 focus:outline-none focus:border-ignite-500/60 leading-relaxed"
+                        />
+                      </div>
+
+                      {/* Image Upload inside Modal */}
+                      <div className="rounded-xl border border-white/10 bg-dark-800/60 p-3.5 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-semibold uppercase tracking-wider text-dark-300 flex items-center gap-1.5">
+                            <FiImage className="text-ignite-400" />
+                            Banner Image / Media Attachment (Optional)
+                          </label>
+                          {newAnnouncement.image_url && (
+                            <button
+                              type="button"
+                              onClick={() => setNewAnnouncement(prev => ({ ...prev, image_url: '' }))}
+                              className="text-[11px] text-rose-400 hover:text-rose-300 transition flex items-center gap-1 cursor-pointer"
+                            >
+                              <FiTrash2 size={12} /> Remove
+                            </button>
                           )}
                         </div>
-                        <p className="text-xs text-dark-300">{item.description || item.content}</p>
-                        <p className="text-[10px] text-dark-400 pt-1">
-                          By {item.author_name || 'Club Administrator'} • {item.created_at ? new Date(item.created_at).toLocaleString() : ''}
-                        </p>
+
+                        {newAnnouncement.image_url ? (
+                          <div className="relative rounded-lg overflow-hidden border border-white/10 bg-black/40 max-h-32">
+                            <img
+                              src={newAnnouncement.image_url}
+                              alt="Attached media"
+                              className="w-full h-32 object-cover"
+                            />
+                            <div className="absolute bottom-1.5 right-1.5 px-2 py-0.5 rounded bg-black/70 backdrop-blur-sm text-[10px] text-emerald-300 font-mono">
+                              ✓ Image Attached
+                            </div>
+                          </div>
+                        ) : null}
+
+                        <div className="flex flex-col gap-2">
+                          <label className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border border-dashed border-white/20 hover:border-ignite-500/50 bg-dark-800 hover:bg-dark-700/60 cursor-pointer transition text-xs text-dark-300 hover:text-white">
+                            {isUploadingAnnouncementImg ? (
+                              <>
+                                <FiRefreshCw className="animate-spin text-ignite-400" />
+                                <span>Uploading image...</span>
+                              </>
+                            ) : (
+                              <>
+                                <FiUploadCloud className="text-ignite-400 text-sm" />
+                                <span>Browse or Drag Image (PNG, JPG, WEBP &lt; 10MB)</span>
+                              </>
+                            )}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              disabled={isUploadingAnnouncementImg}
+                              onChange={(e) => {
+                                if (e.target.files?.[0]) {
+                                  handleAnnouncementImageUpload(e.target.files[0], false);
+                                }
+                              }}
+                              className="hidden"
+                            />
+                          </label>
+
+                          <input
+                            type="url"
+                            placeholder="Or paste direct image URL (https://...)"
+                            value={newAnnouncement.image_url || ''}
+                            onChange={(e) => setNewAnnouncement({ ...newAnnouncement, image_url: e.target.value })}
+                            className="w-full rounded-lg border border-white/10 bg-dark-800 px-2.5 py-1 text-xs text-white placeholder:text-dark-500 focus:outline-none focus:border-ignite-500/60 font-mono"
+                          />
+                        </div>
                       </div>
+
+                      <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/10">
+                        <button
+                          type="button"
+                          onClick={() => setIsCreateModalOpen(false)}
+                          className="px-4 py-2 rounded-xl border border-white/10 bg-dark-800 text-xs text-dark-300 hover:text-white transition cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={isSubmitting || isUploadingAnnouncementImg}
+                          className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-ignite-500 to-rose-600 hover:from-ignite-400 hover:to-rose-500 text-white font-semibold text-xs tracking-wider uppercase transition shadow-lg shadow-ignite-500/25 cursor-pointer disabled:opacity-50 flex items-center gap-2"
+                        >
+                          {isSubmitting ? (
+                            <>
+                              <FiRefreshCw className="animate-spin text-xs" />
+                              <span>Publishing...</span>
+                            </>
+                          ) : (
+                            <>
+                              <FiCheckCircle className="text-xs" />
+                              <span>Publish & Broadcast Announcement</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </form>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* 3. Edit Announcement Modal */}
+            <AnimatePresence>
+              {editingAnnouncement && (
+                <motion.div
+                  key="edit-announcement-modal-overlay"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.18, ease: 'easeOut' }}
+                  className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/80"
+                  onClick={() => setEditingAnnouncement(null)}
+                >
+                  <motion.div
+                    key="edit-announcement-modal-dialog"
+                    initial={{ opacity: 0, scale: 0.96, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.96, y: 10 }}
+                    transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="relative z-10 w-full max-w-xl max-h-[90vh] flex flex-col bg-dark-900 border border-white/15 rounded-2xl shadow-2xl shadow-black/80 overflow-hidden"
+                  >
+                    <div className="flex items-center justify-between border-b border-white/10 px-6 py-4 shrink-0 bg-dark-900">
+                      <h4 className="text-base font-bold text-white flex items-center gap-2">
+                        <FiEdit2 className="text-ignite-400" />
+                        Edit Club Announcement
+                      </h4>
                       <button
-                        onClick={() => handleDeleteAnnouncement(item.id)}
-                        disabled={deletingAnnouncementId === item.id}
-                        className="px-3 py-2 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/25 text-rose-300 hover:text-white transition disabled:opacity-50 shrink-0 flex items-center gap-1.5 text-xs font-semibold cursor-pointer shadow-sm shadow-rose-500/10"
-                        title="Delete Announcement"
+                        type="button"
+                        onClick={() => setEditingAnnouncement(null)}
+                        className="p-1.5 rounded-lg text-dark-400 hover:text-white hover:bg-white/5 transition cursor-pointer"
                       >
-                        {deletingAnnouncementId === item.id ? (
+                        <FiX size={18} />
+                      </button>
+                    </div>
+
+                    <form onSubmit={handleUpdateAnnouncement} className="flex-1 overflow-y-auto px-6 py-5 space-y-4 custom-scrollbar">
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-dark-300 mb-1.5">
+                          Announcement Title *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={editingAnnouncement.title || ''}
+                          onChange={(e) => setEditingAnnouncement({ ...editingAnnouncement, title: e.target.value })}
+                          className="w-full rounded-xl border border-white/10 bg-dark-800 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-ignite-500/60"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-semibold uppercase tracking-wider text-dark-300 mb-1.5">
+                            Category
+                          </label>
+                          <select
+                            value={editingAnnouncement.category || editingAnnouncement.priority || 'general'}
+                            onChange={(e) => setEditingAnnouncement({ ...editingAnnouncement, category: e.target.value })}
+                            className="w-full rounded-xl border border-white/10 bg-dark-800 px-3 py-2 text-xs text-white focus:outline-none"
+                          >
+                            <option value="general">General</option>
+                            <option value="event">Event</option>
+                            <option value="workshop">Workshop</option>
+                            <option value="milestone">Milestone</option>
+                            <option value="urgent">Urgent</option>
+                            <option value="opportunity">Opportunity</option>
+                          </select>
+                        </div>
+
+                        <div className="flex items-end pb-2">
+                          <label className="flex items-center gap-2 text-xs text-white font-medium cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={Boolean(editingAnnouncement.is_pinned)}
+                              onChange={(e) => setEditingAnnouncement({ ...editingAnnouncement, is_pinned: e.target.checked })}
+                              className="rounded border-white/20 bg-dark-700 text-ignite-500 focus:ring-ignite-500 w-4 h-4"
+                            />
+                            <span>📌 Pinned Announcement</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-dark-300 mb-1.5">
+                          Details / Description *
+                        </label>
+                        <textarea
+                          rows={4}
+                          required
+                          value={editingAnnouncement.description || editingAnnouncement.content || ''}
+                          onChange={(e) => setEditingAnnouncement({ ...editingAnnouncement, description: e.target.value })}
+                          className="w-full rounded-xl border border-white/10 bg-dark-800 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-ignite-500/60 leading-relaxed"
+                        />
+                      </div>
+
+                      {/* Image Attachment inside Modal */}
+                      <div className="rounded-xl border border-white/10 bg-dark-800/60 p-3.5 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-semibold uppercase tracking-wider text-dark-300 flex items-center gap-1.5">
+                            <FiImage className="text-ignite-400" />
+                            Media Banner
+                          </label>
+                          {editingAnnouncement.image_url && (
+                            <button
+                              type="button"
+                              onClick={() => setEditingAnnouncement(prev => ({ ...prev, image_url: '' }))}
+                              className="text-[11px] text-rose-400 hover:text-rose-300 transition flex items-center gap-1 cursor-pointer"
+                            >
+                              <FiTrash2 size={12} /> Remove
+                            </button>
+                          )}
+                        </div>
+
+                        {editingAnnouncement.image_url ? (
+                          <div className="rounded-lg overflow-hidden border border-white/10 bg-black/40 max-h-32">
+                            <img
+                              src={editingAnnouncement.image_url}
+                              alt="Attached media"
+                              className="w-full h-32 object-cover"
+                            />
+                          </div>
+                        ) : null}
+
+                        <div className="flex flex-col gap-2">
+                          <label className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-dashed border-white/20 hover:border-ignite-500/50 bg-dark-800 hover:bg-dark-700/60 cursor-pointer transition text-xs text-dark-300 hover:text-white">
+                            {isEditingUploadingImg ? (
+                              <>
+                                <FiRefreshCw className="animate-spin text-ignite-400" />
+                                <span>Uploading image...</span>
+                              </>
+                            ) : (
+                              <>
+                                <FiUploadCloud className="text-ignite-400" />
+                                <span>Upload New Banner Image</span>
+                              </>
+                            )}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              disabled={isEditingUploadingImg}
+                              onChange={(e) => {
+                                if (e.target.files?.[0]) {
+                                  handleAnnouncementImageUpload(e.target.files[0], true);
+                                }
+                              }}
+                              className="hidden"
+                            />
+                          </label>
+
+                          <input
+                            type="url"
+                            placeholder="Or paste direct image URL (https://...)"
+                            value={editingAnnouncement.image_url || ''}
+                            onChange={(e) => setEditingAnnouncement({ ...editingAnnouncement, image_url: e.target.value })}
+                            className="w-full rounded-lg border border-white/10 bg-dark-800 px-2.5 py-1 text-xs text-white placeholder:text-dark-500 focus:outline-none focus:border-ignite-500/60 font-mono"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/10">
+                        <button
+                          type="button"
+                          onClick={() => setEditingAnnouncement(null)}
+                          className="px-4 py-2 rounded-xl border border-white/10 bg-dark-800 text-xs text-dark-300 hover:text-white transition cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={isSubmitting || isEditingUploadingImg}
+                          className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-ignite-500 to-rose-600 hover:from-ignite-400 hover:to-rose-500 text-white font-semibold text-xs tracking-wider uppercase transition shadow-lg shadow-ignite-500/25 cursor-pointer disabled:opacity-50 flex items-center gap-2"
+                        >
+                          {isSubmitting ? (
+                            <>
+                              <FiRefreshCw className="animate-spin text-xs" />
+                              <span>Saving...</span>
+                            </>
+                          ) : (
+                            <>
+                              <FiCheck className="text-xs" />
+                              <span>Save Changes</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </form>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* 4. Delete Confirmation Modal */}
+            <AnimatePresence>
+              {announcementToDelete && (
+                <motion.div
+                  key="delete-announcement-modal-overlay"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.18, ease: 'easeOut' }}
+                  className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/80"
+                  onClick={() => setAnnouncementToDelete(null)}
+                >
+                  <motion.div
+                    key="delete-announcement-modal-dialog"
+                    initial={{ opacity: 0, scale: 0.96, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.96, y: 10 }}
+                    transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="relative z-10 w-full max-w-md bg-dark-900 border border-rose-500/30 rounded-2xl p-6 shadow-2xl shadow-black/80 space-y-4"
+                  >
+                    <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 text-xl mx-auto">
+                      <FiAlertTriangle />
+                    </div>
+
+                    <div className="text-center space-y-1">
+                      <h4 className="text-base font-bold text-white">Delete Announcement?</h4>
+                      <p className="text-xs text-dark-400">
+                        Are you sure you want to permanently delete{' '}
+                        <span className="text-white font-semibold">"{announcementToDelete.title}"</span>? This will remove it from all student feeds immediately.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-center gap-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setAnnouncementToDelete(null)}
+                        className="px-4 py-2 rounded-xl border border-white/10 bg-dark-800 text-xs font-semibold text-dark-300 hover:text-white transition cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        disabled={deletingAnnouncementId === announcementToDelete.id}
+                        onClick={() => handleDeleteAnnouncement(announcementToDelete.id)}
+                        className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs transition shadow-lg shadow-rose-600/30 cursor-pointer flex items-center gap-1.5"
+                      >
+                        {deletingAnnouncementId === announcementToDelete.id ? (
                           <>
-                            <FiRefreshCw className="text-xs animate-spin" />
+                            <FiRefreshCw className="animate-spin text-xs" />
                             <span>Deleting...</span>
                           </>
                         ) : (
                           <>
                             <FiTrash2 className="text-xs" />
-                            <span>Delete</span>
+                            <span>Yes, Delete Announcement</span>
                           </>
                         )}
                       </button>
                     </div>
-                  ))}
-                </div>
+                  </motion.div>
+                </motion.div>
               )}
-            </div>
+            </AnimatePresence>
           </div>
         )}
 

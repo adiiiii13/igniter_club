@@ -4,8 +4,8 @@ import { FiX, FiChevronDown, FiCheck } from 'react-icons/fi';
 import { supabase } from '../../utils/supabase';
 
 const DEPARTMENTS = [
-  'B. Tech in Computer Sceince Engineering',
-  'B. Tech in Computer Sceince & Business System',
+  'B. Tech in Computer Science Engineering',
+  'B. Tech in Computer Science & Business System',
   'B. Tech in Mechanical',
   'B. Tech in Civil',
   'B. Tech in Electronics and Communication Engineering',

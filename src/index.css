@@ -389,13 +389,14 @@
 
   /* Glass blurry border & pill container */
   .brand-lockup-nav {
-    padding: 6px 14px;
+    padding: 6px 16px;
     background: rgba(255, 255, 255, 0.04);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     border: 1px solid rgba(255, 255, 255, 0.13);
     border-radius: 9999px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    transform: translateY(-50%) !important;
   }
 
   @media (min-width: 640px) {
@@ -404,39 +405,50 @@
     }
   }
 
-  /* Little on-hover glow effect */
+  /* Just on-hover glow effect, NO shifting downwards, NO pop up */
   .brand-lockup-nav:hover,
   .brand-lockup-nav:focus-visible {
+    transform: translateY(-50%) !important;
     background: rgba(255, 255, 255, 0.07);
-    border-color: rgba(244, 63, 94, 0.35);
-    box-shadow: 0 0 22px rgba(244, 63, 94, 0.22),
-                0 0 38px rgba(56, 189, 248, 0.14),
-                0 8px 24px rgba(0, 0, 0, 0.35),
+    border-color: rgba(244, 63, 94, 0.45);
+    box-shadow: 0 0 20px rgba(244, 63, 94, 0.3),
+                0 0 38px rgba(56, 189, 248, 0.18),
+                0 4px 20px rgba(0, 0, 0, 0.3),
                 inset 0 1px 0 rgba(255, 255, 255, 0.2);
   }
 
-  /* Disable jittery / rotating hover effect on logos inside lockup */
-  .brand-lockup .brand-logo-shell {
-    animation: none;
-  }
-
-  .brand-lockup .brand-logo-shell::after {
-    display: none;
-  }
-
+  /* Completely disable any pop up, scale, or shifting on lockup and inner logos */
   .brand-lockup:hover,
   .brand-lockup:focus-visible {
-    transform: none !important;
     outline: none;
   }
 
-  .brand-lockup:hover .brand-logo-img,
-  .brand-lockup:focus-visible .brand-logo-img,
-  .brand-lockup:hover .brand-partner-img,
-  .brand-lockup:focus-visible .brand-partner-img,
+  :not(.brand-lockup-nav).brand-lockup:hover,
+  :not(.brand-lockup-nav).brand-lockup:focus-visible {
+    transform: none !important;
+  }
+
+  .brand-lockup .brand-logo-shell,
   .brand-lockup:hover .brand-logo-shell,
   .brand-lockup:focus-visible .brand-logo-shell {
+    animation: none !important;
     transform: none !important;
+    transition: none !important;
+  }
+
+  .brand-lockup .brand-logo-shell::after,
+  .brand-lockup:hover .brand-logo-shell::after {
+    display: none !important;
+  }
+
+  .brand-lockup .brand-logo-img,
+  .brand-lockup:hover .brand-logo-img,
+  .brand-lockup:focus-visible .brand-logo-img,
+  .brand-lockup .brand-partner-img,
+  .brand-lockup:hover .brand-partner-img,
+  .brand-lockup:focus-visible .brand-partner-img {
+    transform: none !important;
+    transition: none !important;
     filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.4));
   }
 
@@ -445,7 +457,7 @@
     height: 1.6rem;
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.28) 50%, rgba(255, 255, 255, 0.06) 100%);
     flex-shrink: 0;
-    transition: background 260ms ease, height 260ms ease;
+    transition: background 260ms ease;
   }
 
   .brand-lockup:hover .brand-lockup-divider,

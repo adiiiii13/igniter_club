@@ -90,14 +90,23 @@ export default function StudentHome() {
         const { data: announcementsData } = await supabase
           .from('announcements')
           .select('*')
+          .order('is_pinned', { ascending: false })
           .order('created_at', { ascending: false })
           .limit(5);
 
         const mappedAnnouncements = (announcementsData || []).map((ann) => ({
           id: ann.id,
           title: ann.title,
-          desc: ann.description,
-          time: new Date(ann.created_at).toLocaleString(),
+          desc: ann.description || ann.content || '',
+          imageUrl: ann.image_url,
+          category: ann.category,
+          isPinned: Boolean(ann.is_pinned),
+          time: new Date(ann.created_at).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+          }),
         }));
         setAnnouncements(mappedAnnouncements);
 
@@ -195,6 +204,18 @@ export default function StudentHome() {
     };
 
     fetchData();
+
+    // Supabase Real-time listener for live announcements
+    const announcementsChannel = supabase
+      .channel('student-home-announcements')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'announcements' }, () => {
+        fetchData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(announcementsChannel);
+    };
   }, [refreshKey]);
 
   if (isLoading) {
@@ -329,17 +350,46 @@ export default function StudentHome() {
                       <div className="h-3 w-1/3 rounded bg-white/5 mt-2" />
                     </div>
                   ) : announcements.length === 0 && (
-                    <p className="text-sm text-dark-400">No announcements yet.</p>
+                    <div className="py-6 text-center rounded-xl border border-dashed border-white/10 bg-dark-800/30 space-y-2">
+                      <div className="w-10 h-10 rounded-xl bg-dark-700/60 border border-white/10 mx-auto flex items-center justify-center text-dark-400 text-sm">
+                        <FiBell />
+                      </div>
+                      <p className="text-xs text-dark-300 font-medium">No announcements published yet</p>
+                      <p className="text-[11px] text-dark-500 max-w-xs mx-auto">
+                        Official broadcasts and updates from club leadership will appear here.
+                      </p>
+                    </div>
                   )}
-                  {!sectionLoading.announcements && announcements.slice(0, 2).map((ann) => (
-                    <div key={ann.id} className="mb-3">
-                      <p className="text-sm font-medium text-white">{ann.title}</p>
-                      <p className="text-xs text-dark-400 mt-1">{ann.desc}</p>
-                      <p className="text-xs text-dark-600 mt-2">{ann.time}</p>
+                  {!sectionLoading.announcements && announcements.slice(0, 3).map((ann) => (
+                    <div key={ann.id} className="mb-3.5 pb-3 border-b border-white/5 last:border-0 last:pb-0 space-y-1.5">
+                      {ann.imageUrl && (
+                        <div className="w-full h-28 rounded-lg overflow-hidden border border-white/10 mb-2 bg-black/40">
+                          <img src={ann.imageUrl} alt={ann.title} className="w-full h-full object-cover" />
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2">
+                        {ann.isPinned && (
+                          <span className="text-[10px] text-purple-300 font-medium bg-purple-500/20 px-1.5 py-0.5 rounded border border-purple-500/30">
+                            📌 Pinned
+                          </span>
+                        )}
+                        <p className="text-sm font-semibold text-white leading-tight">{ann.title}</p>
+                      </div>
+                      <p className="text-xs text-dark-300 line-clamp-2 leading-relaxed">{ann.desc}</p>
+                      <div className="flex items-center justify-between text-[11px] text-dark-500 pt-0.5">
+                        <span className="capitalize font-mono text-[10px] text-ignite-400 font-semibold px-2 py-0.5 rounded bg-ignite-500/10 border border-ignite-500/20">
+                          {ann.category || 'General'}
+                        </span>
+                        <span>{ann.time}</span>
+                      </div>
                     </div>
                   ))}
-                  <button className="inline-flex items-center gap-1 text-xs text-ignite-400 hover:text-ignite-300 transition mt-4 font-medium">
-                    View All <FiChevronRight size={14} />
+                  <button
+                    type="button"
+                    onClick={() => navigate('/student/notifications')}
+                    className="inline-flex items-center gap-1 text-xs text-ignite-400 hover:text-ignite-300 transition mt-4 font-medium cursor-pointer"
+                  >
+                    View All Announcements <FiChevronRight size={14} />
                   </button>
                 </div>
 

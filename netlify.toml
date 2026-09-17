@@ -20,38 +20,43 @@
 
 [[redirects]]
   from = "/"
-  to = "/welcome/"
+  to = "/welcome/index.html"
   status = 302
 
 [[redirects]]
   from = "/welcome"
-  to = "/welcome/"
-  status = 302
+  to = "/welcome/index.html"
+  status = 301
+
+[[redirects]]
+  from = "/welcome/"
+  to = "/welcome/index.html"
+  status = 301
 
 [[redirects]]
   from = "/intro"
-  to = "/welcome/"
-  status = 302
+  to = "/welcome/index.html"
+  status = 301
 
 [[redirects]]
   from = "/intro/"
-  to = "/welcome/"
-  status = 302
+  to = "/welcome/index.html"
+  status = 301
 
 [[redirects]]
   from = "/Parallax-website-main"
-  to = "/welcome/"
+  to = "/welcome/index.html"
   status = 301
 
 [[redirects]]
   from = "/Parallax-website-main/"
-  to = "/welcome/"
+  to = "/welcome/index.html"
   status = 301
 
 [[redirects]]
-  from = "/welcome/*"
+  from = "/Parallax-website-main/*"
   to = "/welcome/:splat"
-  status = 200
+  status = 301
 
 [[redirects]]
   from = "/home"
@@ -79,12 +84,27 @@
   status = 200
 
 [[redirects]]
+  from = "/founders"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
   from = "/auth/*"
   to = "/index.html"
   status = 200
 
 [[redirects]]
   from = "/student/*"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/admin"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/admin/*"
   to = "/index.html"
   status = 200
 

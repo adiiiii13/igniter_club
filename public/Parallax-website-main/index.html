@@ -6,27 +6,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Welcome to Igniter Club × GMIT. Experience our immersive landing intro and discover the community." />
     <meta name="robots" content="index, follow" />
-    <link rel="canonical" href="https://ignitergmit.netlify.app/welcome" />
+    <link rel="canonical" href="https://ignitergmit.netlify.app/welcome/" />
 
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Igniter Club × GMIT" />
     <meta property="og:title" content="Welcome — Igniter Club × GMIT" />
     <meta property="og:description" content="Start your journey with Igniter Club × GMIT through an immersive intro experience." />
-    <meta property="og:url" content="https://ignitergmit.netlify.app/welcome" />
-    <meta property="og:image" content="https://ignitergmit.netlify.app/Parallax-website-main/img/layer-base.png" />
+    <meta property="og:url" content="https://ignitergmit.netlify.app/welcome/" />
+    <meta property="og:image" content="https://ignitergmit.netlify.app/welcome/img/layer-base.png" />
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Welcome — Igniter Club × GMIT" />
     <meta name="twitter:description" content="Start your journey with Igniter Club × GMIT through an immersive intro experience." />
-    <meta name="twitter:image" content="https://ignitergmit.netlify.app/Parallax-website-main/img/layer-base.png" />
+    <meta name="twitter:image" content="https://ignitergmit.netlify.app/welcome/img/layer-base.png" />
 
     <title>Welcome - Igniter Club</title>
 
-    <link rel="stylesheet" href="/Parallax-website-main/scss/main.css">
-    <script src="/Parallax-website-main/gsap/gsap.min.js" defer></script>
-    <script src="/Parallax-website-main/gsap/ScrollTrigger.min.js" defer></script>
-    <script src="/Parallax-website-main/gsap/ScrollSmoother.min.js" defer></script>
-    <script src="/Parallax-website-main/js/app.js" defer></script>
+    <link rel="stylesheet" href="./scss/main.css">
+    <script src="./gsap/gsap.min.js" defer></script>
+    <script src="./gsap/ScrollTrigger.min.js" defer></script>
+    <script src="./gsap/ScrollSmoother.min.js" defer></script>
+    <script src="./js/app.js" defer></script>
 </head>
 <body class="intro-active">
     <div class="landing-intro" id="landingIntro" aria-label="Landing Intro">
@@ -46,35 +46,38 @@
                         </a>
                     </div>
 
-                    <!-- Parallax Left Side: GMIT 15 Years of Tomorrow -->
-                    <div class="layer-parallax-side layer-parallax-left">
-                        <a href="/home" class="parallax-logo-badge" title="GMIT 15 Years of Tomorrow">
-                            <img src="/Parallax-website-main/img/gmit-15years-logo.png" alt="GMIT 15 Years of Tomorrow" class="parallax-side-logo-img" />
+                    <!-- Parallax 3 Big Logo Cards in Jungle Foliage -->
+                    <!-- Left: GMIT Logo Glass Card with White Inner Badge -->
+                    <div class="parallax-jungle-card parallax-jungle-card--left">
+                        <a href="/home" class="parallax-glass-card parallax-glass-card--brand" title="GMIT — It's campuslife">
+                            <div class="parallax-inner-badge parallax-inner-badge--white">
+                                <img src="./img/gmit-campus-logo.png" alt="GMIT" class="parallax-card-logo-img parallax-card-logo-img--gmit" />
+                            </div>
                         </a>
                     </div>
 
-                    <!-- Parallax Right Side: JIS Group Educational Initiatives -->
-                    <div class="layer-parallax-side layer-parallax-right">
-                        <a href="/home" class="parallax-logo-badge" title="JIS Group Educational Initiatives">
-                            <img src="/Parallax-website-main/img/jis-group-logo.png" alt="JIS Group Educational Initiatives" class="parallax-side-logo-img" />
+                    <!-- Center: Igniter Club Logo Glass Card -->
+                    <div class="parallax-jungle-card parallax-jungle-card--center">
+                        <a href="/home" class="parallax-glass-card parallax-glass-card--igniter" title="Igniter Club GMIT">
+                            <img src="./img/igniter-tight.png" alt="Igniter Club" class="parallax-card-logo-img parallax-card-logo-img--igniter" />
                         </a>
                     </div>
 
-                    <!-- Center Parallax Header: Igniter Club Logo & Welcome Title -->
-                    <div class="layers__header">
-                        <a href="/home" class="parallax-center-logo-wrap" title="Igniter Club GMIT">
-                            <img src="/Parallax-website-main/img/igniter-logo.png" alt="Igniter Club" class="parallax-center-logo-img" />
+                    <!-- Right: JIS University Logo Glass Card with White Text -->
+                    <div class="parallax-jungle-card parallax-jungle-card--right">
+                        <a href="/home" class="parallax-glass-card parallax-glass-card--brand" title="JIS University">
+                            <div class="parallax-inner-badge parallax-inner-badge--jis">
+                                <img src="./img/jis-uni-white-text.png" alt="JIS University" class="parallax-card-logo-img parallax-card-logo-img--jis" />
+                            </div>
                         </a>
-                        <div class="layers__caption" style="text-shadow: 0 2px 10px rgba(0,0,0,0.5);">Welcome to</div>
-                        <div class="layers__title" style="text-shadow: 0 5px 20px rgba(0,0,0,0.8);">Igniter Club</div>
                     </div>
 
-                    <div class="layer layers__base" style="background-image: url(/Parallax-website-main/img/layer-base.png);"></div>
-                    <div class="layer layers__middle" style="background-image: url(/Parallax-website-main/img/layer-middle.png);"></div>
-                    <div class="layer layers__front" style="background-image: url(/Parallax-website-main/img/layer-front.png);"></div>
+                    <div class="layer layers__base" style="background-image: url(./img/layer-base.png);"></div>
+                    <div class="layer layers__middle" style="background-image: url(./img/layer-middle.png);"></div>
+                    <div class="layer layers__front" style="background-image: url(./img/layer-front.png);"></div>
                 </div>
             </header>
-            <article class="article" style="background-image: url(/Parallax-website-main/img/dungeon.jpg);">
+            <article class="article" style="background-image: url(./img/dungeon.jpg);">
                 <div class="article__content">
                     <h2 class="article__header">Ready to explore?</h2>
                     <p class="article__paragrapf">Get ready to dive deep into a world of endless tech possibilities, epic hackathons, and a community driven by innovation. Your journey starts right here.</p>

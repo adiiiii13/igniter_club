@@ -104,7 +104,7 @@ export default function ProtectedRoute({ children, requireProfileComplete = fals
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/Parallax-website-main/" replace />;
+    return <Navigate to="/home" replace />;
   }
 
   if (isAdminUser) {

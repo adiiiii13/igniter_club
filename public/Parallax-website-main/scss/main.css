@@ -14,6 +14,7 @@
   font-weight: 900;
 }
 :root {
+  --scrollTop: 0px;
   --scroll-track: #080d22;
   --scroll-thumb-start: #f43f5e;
   --scroll-thumb-mid: #fb7185;
@@ -146,10 +147,11 @@ body.intro-active .wrapper {
   position: absolute;
   background-size: cover;
   background-position: center;
+  pointer-events: none;
 }
 .header .layers__header {
   z-index: 1;
-  transform: translate3d(0, calc(var(--scrollTop) / 2), 0);
+  transform: translate3d(0, calc(var(--scrollTop, 0px) / 2), 0);
   transition: transform 0.75s cubic-bezier(0.075, 0.5, 0, 1);
   text-transform: uppercase;
   will-change: transform;
@@ -167,21 +169,21 @@ body.intro-active .wrapper {
   margin-top: calc((1vw + 1vh) * -1);
 }
 .header .layers__base {
-  transform: translate3d(0, calc(var(--scrollTop) / 1.6), 0);
+  transform: translate3d(0, calc(var(--scrollTop, 0px) / 1.6), 0);
   transition: transform 0.75s cubic-bezier(0.075, 0.5, 0, 1);
   z-index: 0;
   will-change: transform;
 }
 .header .layers__middle {
-  transform: translate3d(0, calc(var(--scrollTop) / 2.5), 0);
+  transform: translate3d(0, calc(var(--scrollTop, 0px) / 2.5), 0);
   transition: transform 0.75s cubic-bezier(0.075, 0.5, 0, 1);
-  z-index: 2;
+  z-index: 1;
   will-change: transform;
 }
 .header .layers__front {
-  transform: translate3d(0, calc(var(--scrollTop) / 5.7), 0);
+  transform: translate3d(0, calc(var(--scrollTop, 0px) / 5.7), 0);
   transition: transform 0.75s cubic-bezier(0.075, 0.5, 0, 1);
-  z-index: 2;
+  z-index: 3;
   will-change: transform;
 }
 
@@ -224,155 +226,261 @@ body.intro-active .wrapper {
   box-shadow: 0 12px 28px rgba(244, 63, 94, 0.35);
 }
 
-/* Parallax Side Brand Layers (Left: GMIT 15, Right: JIS Group) */
-.layer-parallax-side {
+/* Parallax 3 Jungle Brand Cards */
+.parallax-jungle-card {
   position: absolute;
-  top: clamp(2rem, 7vh, 5.5rem);
-  z-index: 10;
+  z-index: 2;
   will-change: transform;
-  transform: translate3d(0, calc(var(--scrollTop) / 2.6), 0);
-  transition: transform 0.75s cubic-bezier(0.075, 0.5, 0, 1);
   pointer-events: auto;
 }
 
-.layer-parallax-left {
-  left: clamp(1.5rem, 4.5vw, 5rem);
+.parallax-jungle-card--left {
+  left: clamp(1.5rem, 5.5vw, 8.5rem);
+  top: clamp(45%, 49.5vh, 55%);
+  transform: translate3d(0, calc(var(--scrollTop, 0px) / 2.2), 0);
+  transition: transform 0.75s cubic-bezier(0.075, 0.5, 0, 1);
 }
 
-.layer-parallax-right {
-  right: clamp(1.5rem, 4.5vw, 5rem);
+.parallax-jungle-card--right {
+  right: clamp(1.5rem, 5.5vw, 8.5rem);
+  top: clamp(45%, 49.5vh, 55%);
+  transform: translate3d(0, calc(var(--scrollTop, 0px) / 2.2), 0);
+  transition: transform 0.75s cubic-bezier(0.075, 0.5, 0, 1);
 }
 
-.parallax-logo-badge {
+.parallax-jungle-card--center {
+  left: 50%;
+  top: clamp(20%, 24vh, 28%);
+  transform: translate3d(-50%, calc(var(--scrollTop, 0px) / 2.0), 0);
+  transition: transform 0.75s cubic-bezier(0.075, 0.5, 0, 1);
+}
+
+/* Glass Card Containers - Whitish Transparent Frosted Glass */
+.parallax-glass-card {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 10px 18px;
-  background: rgba(255, 255, 255, 0.94);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  box-shadow: 0 14px 35px rgba(0, 0, 0, 0.45), 0 0 25px rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(24px) saturate(140%);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  border: 1.5px solid rgba(255, 255, 255, 0.38);
+  border-radius: 28px;
   text-decoration: none;
   cursor: pointer;
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease, background 0.35s ease;
-  animation: parallaxFloatLeft 5s ease-in-out infinite;
-}
-
-.layer-parallax-right .parallax-logo-badge {
-  animation: parallaxFloatRight 5.4s ease-in-out 0.8s infinite;
-}
-
-.parallax-logo-badge:hover {
-  transform: translateY(-5px) scale(1.05);
-  background: #ffffff;
-  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.55), 0 0 35px rgba(56, 189, 248, 0.35);
-}
-
-.parallax-side-logo-img {
-  height: clamp(34px, 4.5vw, 56px);
-  width: auto;
-  object-fit: contain;
-  display: block;
-}
-
-/* Center Igniter Club Logo in Parallax */
-.parallax-center-logo-wrap {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease, border-color 0.35s ease, background 0.35s ease;
   position: relative;
-  margin-bottom: calc((1vw + 1vh) * 0.8);
-  cursor: pointer;
-  text-decoration: none;
+  overflow: hidden;
+  box-shadow:
+    0 24px 55px rgba(0, 0, 0, 0.52),
+    0 4px 18px rgba(0, 0, 0, 0.22),
+    inset 0 1.5px 1px rgba(255, 255, 255, 0.7),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.18);
 }
 
-.parallax-center-logo-wrap::after {
+/* Glass top specular highlight */
+.parallax-glass-card::before {
   content: '';
   position: absolute;
-  inset: -20%;
-  border-radius: 9999px;
-  background: radial-gradient(circle, rgba(244, 63, 94, 0.42) 0%, rgba(244, 63, 94, 0) 72%);
-  filter: blur(28px);
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 48%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0) 100%);
+  border-radius: 28px 28px 0 0;
   pointer-events: none;
-  animation: centerPulse 3.5s ease-in-out infinite;
 }
 
-.parallax-center-logo-img {
-  width: clamp(95px, 11vw, 155px);
-  height: auto;
-  object-fit: contain;
+/* GMIT & JIS Brand Cards: Whitish Transparent Frosted Glass */
+.parallax-glass-card--brand {
+  background: rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(24px) saturate(140%);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  border: 1.5px solid rgba(255, 255, 255, 0.42);
+  box-shadow:
+    0 24px 55px rgba(0, 0, 0, 0.5),
+    0 6px 18px rgba(0, 0, 0, 0.2),
+    inset 0 1.5px 1px rgba(255, 255, 255, 0.75),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.18);
+  padding: clamp(16px, 2vw, 24px) clamp(22px, 2.6vw, 34px);
+}
+
+.parallax-glass-card--brand:hover {
+  transform: translateY(-5px) scale(1.03);
+  background: rgba(255, 255, 255, 0.24);
+  border-color: rgba(255, 255, 255, 0.7);
+  box-shadow:
+    0 30px 65px rgba(0, 0, 0, 0.6),
+    0 0 35px rgba(255, 255, 255, 0.35),
+    inset 0 1.5px 1px rgba(255, 255, 255, 0.9);
+}
+
+/* Igniter Club Center Card: Whitish Transparent Frosted Glass, Tightly Wrapping the Logo */
+.parallax-glass-card--igniter {
+  background: rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(26px) saturate(140%);
+  -webkit-backdrop-filter: blur(26px) saturate(140%);
+  border: 1.5px solid rgba(255, 255, 255, 0.44);
+  border-radius: 26px;
+  box-shadow:
+    0 28px 65px rgba(0, 0, 0, 0.55),
+    0 0 45px rgba(244, 63, 94, 0.25),
+    inset 0 1.5px 1px rgba(255, 255, 255, 0.75),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.2);
+  padding: clamp(8px, 1vw, 14px) clamp(16px, 1.9vw, 26px);
+}
+
+.parallax-glass-card--igniter::after {
+  content: '';
+  position: absolute;
+  inset: -12%;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(244, 63, 94, 0.25) 0%, rgba(244, 63, 94, 0) 70%);
+  filter: blur(30px);
+  pointer-events: none;
+}
+
+.parallax-glass-card--igniter:hover {
+  transform: translateY(-5px) scale(1.03);
+  background: rgba(255, 255, 255, 0.24);
+  border-color: rgba(244, 63, 94, 0.75);
+  box-shadow:
+    0 34px 75px rgba(0, 0, 0, 0.65),
+    0 0 60px rgba(244, 63, 94, 0.45),
+    inset 0 1.5px 1px rgba(255, 255, 255, 0.9);
+}
+
+/* Inner Badges inside Transparent Glass Cards */
+.parallax-inner-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 22px;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
   position: relative;
   z-index: 1;
-  filter: drop-shadow(0 16px 30px rgba(0, 0, 0, 0.65)) drop-shadow(0 0 24px rgba(244, 63, 94, 0.45));
-  transition: transform 0.38s cubic-bezier(0.16, 1, 0.3, 1), filter 0.38s ease;
-  animation: centerFloat 4.2s ease-in-out infinite;
 }
 
-.parallax-center-logo-wrap:hover .parallax-center-logo-img {
-  transform: scale(1.08) translateY(-4px);
-  filter: drop-shadow(0 22px 36px rgba(0, 0, 0, 0.75)) drop-shadow(0 0 40px rgba(244, 63, 94, 0.75));
+/* White inner badge for GMIT */
+.parallax-inner-badge--white {
+  background: #ffffff;
+  padding: clamp(14px, 1.6vw, 20px) clamp(20px, 2.4vw, 30px);
+  border-radius: 22px;
+  box-shadow: 0 4px 22px rgba(0, 0, 0, 0.3);
 }
 
-@keyframes parallaxFloatLeft {
-  0%, 100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-8px);
-  }
+/* JIS inner badge */
+.parallax-inner-badge--jis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 22px;
+  background: transparent;
+  padding: 0;
 }
 
-@keyframes parallaxFloatRight {
-  0%, 100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-9px);
-  }
+.parallax-glass-card:hover .parallax-inner-badge {
+  transform: scale(1.03);
 }
 
-@keyframes centerFloat {
-  0%, 100% {
-    transform: translateY(0px) rotate(0deg);
-  }
-  50% {
-    transform: translateY(-6px) rotate(-1deg);
-  }
+/* Logo Images - Bigger Sizes */
+.parallax-card-logo-img {
+  display: block;
+  object-fit: contain;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), filter 0.35s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.parallax-card-logo-img--gmit {
+  height: clamp(80px, 9.2vw, 120px);
+  width: auto;
+  max-width: clamp(210px, 23vw, 300px);
+}
+
+.parallax-card-logo-img--jis {
+  height: clamp(88px, 10.2vw, 135px);
+  width: auto;
+  max-width: clamp(210px, 23vw, 300px);
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 18px rgba(56, 189, 248, 0.35));
+}
+
+.parallax-card-logo-img--igniter {
+  height: clamp(235px, 27vw, 340px);
+  width: auto;
+  max-width: clamp(400px, 46vw, 600px);
+  filter: drop-shadow(0 14px 26px rgba(0, 0, 0, 0.65)) drop-shadow(0 0 28px rgba(244, 63, 94, 0.45));
+}
+
+.parallax-glass-card:hover .parallax-card-logo-img {
+  transform: scale(1.04);
+}
+
+.parallax-glass-card--igniter:hover .parallax-card-logo-img--igniter {
+  filter: drop-shadow(0 18px 34px rgba(0, 0, 0, 0.8)) drop-shadow(0 0 45px rgba(244, 63, 94, 0.8));
 }
 
 @keyframes centerPulse {
   0%, 100% {
-    opacity: 0.5;
+    opacity: 0.45;
     transform: scale(0.96);
   }
   50% {
-    opacity: 0.9;
+    opacity: 0.85;
     transform: scale(1.08);
   }
 }
 
-/* Mobile Responsiveness */
+/* Tablet & Mobile Responsiveness */
+@media (max-width: 1024px) {
+  .parallax-jungle-card--left {
+    left: clamp(1rem, 4vw, 3rem);
+    top: 52%;
+  }
+  .parallax-jungle-card--right {
+    right: clamp(1rem, 4vw, 3rem);
+    top: 52%;
+  }
+  .parallax-jungle-card--center {
+    top: 36%;
+  }
+  .parallax-card-logo-img--gmit,
+  .parallax-card-logo-img--jis {
+    height: clamp(50px, 6.5vw, 80px);
+  }
+  .parallax-card-logo-img--igniter {
+    height: clamp(90px, 11vw, 140px);
+  }
+}
+
 @media (max-width: 640px) {
-  .layer-parallax-side {
-    top: 1rem;
-  }
-  .layer-parallax-left {
+  .parallax-jungle-card--left {
     left: 0.75rem;
+    top: 60%;
   }
-  .layer-parallax-right {
+  .parallax-jungle-card--right {
     right: 0.75rem;
+    top: 60%;
   }
-  .parallax-logo-badge {
-    padding: 6px 10px;
-    border-radius: 12px;
+  .parallax-jungle-card--center {
+    top: 28%;
   }
-  .parallax-side-logo-img {
-    height: 24px;
+  .parallax-glass-card--brand {
+    padding: 10px 14px;
+    border-radius: 18px;
+  }
+  .parallax-glass-card--igniter {
+    padding: 8px 14px;
+    border-radius: 18px;
+  }
+  .parallax-card-logo-img--gmit,
+  .parallax-card-logo-img--jis {
+    height: 38px;
+  }
+  .parallax-card-logo-img--igniter {
+    height: 92px;
   }
   .parallax-top-nav {
-    top: 3.85rem;
+    top: 1.5rem;
   }
   .parallax-nav-back {
     padding: 6px 14px;
@@ -410,7 +518,7 @@ body.intro-active .wrapper {
   text-transform: uppercase;
   font-size: calc((1vw + 1vh) * 1.8);
   letter-spacing: calc((1vw + 1vh) / 7.5);
-  transform: translate3d(0, calc(var(--scrollTop) / -9.5), 0);
+  transform: translate3d(0, calc(var(--scrollTop, 0px) / -9.5), 0);
   transition: transform 0.75s cubic-bezier(0.075, 0.5, 0, 1);
   will-change: transform;
 }
@@ -418,7 +526,7 @@ body.intro-active .wrapper {
   max-width: calc((1vw + 1vh) * 30);
   font-size: calc((1vw + 1vh) * 0.9);
   margin-top: calc((1vw + 1vh) / 1.25);
-  transform: translate3d(0, calc(var(--scrollTop) / -9.5), 0);
+  transform: translate3d(0, calc(var(--scrollTop, 0px) / -9.5), 0);
   transition: transform 0.75s cubic-bezier(0.075, 0.5, 0, 1);
   will-change: transform;
 }

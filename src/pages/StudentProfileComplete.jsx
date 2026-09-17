@@ -33,8 +33,8 @@ export default function StudentProfileComplete() {
   const studyYears = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
   const semesters = ['1st Semester', '2nd Semester', '3rd Semester', '4th Semester', '5th Semester', '6th Semester', '7th Semester', '8th Semester'];
   const departments = [
-    'B. Tech in Computer Sceince Engineering',
-    'B. Tech in Computer Sceince & Business System',
+    'B. Tech in Computer Science Engineering',
+    'B. Tech in Computer Science & Business System',
     'B. Tech in Mechanical',
     'B. Tech in Civil',
     'B. Tech in Electronics and Communication Engineering',

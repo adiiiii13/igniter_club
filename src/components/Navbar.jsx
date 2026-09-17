@@ -9,7 +9,7 @@ import { navigateWithAnimeExit } from '../utils/authAnimations';
 import { supabase } from '../utils/supabase';
 import { getCurrentUserRole } from '../utils/authRole';
 
-const PARALLAX_LANDING_PATH = '/Parallax-website-main/';
+const PARALLAX_LANDING_PATH = '/welcome/index.html';
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);

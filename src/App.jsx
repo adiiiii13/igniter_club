@@ -47,11 +47,27 @@ import ChangePasswordPage from './pages/ChangePasswordPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { supabase } from './utils/supabase';
 
+function ExternalRedirect({ to }) {
+  useEffect(() => {
+    const currentPath = window.location.pathname;
+    if (currentPath === to || currentPath === to.replace('index.html', '')) return;
+    window.location.replace(to);
+  }, [to]);
+  return null;
+}
+
 export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
   const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
-  const isIntroPage = location.pathname === '/' || location.pathname === '/welcome' || location.pathname === '/intro' || location.pathname === '/intro/' || location.pathname.startsWith('/Parallax-website-main');
+  const isIntroPage =
+    location.pathname === '/' ||
+    location.pathname === '/welcome' ||
+    location.pathname === '/welcome/' ||
+    location.pathname === '/welcome/index.html' ||
+    location.pathname === '/intro' ||
+    location.pathname === '/intro/' ||
+    location.pathname.startsWith('/Parallax-website-main');
   const isAuthRoute = location.pathname.startsWith('/auth/');
   const isStudentRoute = location.pathname.startsWith('/student/');
   const isAdminRoute = location.pathname.startsWith('/admin');
@@ -197,10 +213,14 @@ export default function App() {
       {!isIntroPage && !isAuthRoute && !isStudentRoute && !isAdminRoute && <Navbar />}
 
       <Routes>
-        <Route path="/" element={<Navigate to="/Parallax-website-main/" replace />} />
-        <Route path="/welcome" element={<Navigate to="/Parallax-website-main/" replace />} />
-        <Route path="/intro" element={<Navigate to="/Parallax-website-main/" replace />} />
-        <Route path="/intro/" element={<Navigate to="/Parallax-website-main/" replace />} />
+        <Route path="/" element={<ExternalRedirect to="/welcome/index.html" />} />
+        <Route path="/welcome" element={<ExternalRedirect to="/welcome/index.html" />} />
+        <Route path="/welcome/" element={<ExternalRedirect to="/welcome/index.html" />} />
+        <Route path="/welcome/index.html" element={<ExternalRedirect to="/welcome/index.html" />} />
+        <Route path="/intro" element={<ExternalRedirect to="/welcome/index.html" />} />
+        <Route path="/intro/" element={<ExternalRedirect to="/welcome/index.html" />} />
+        <Route path="/Parallax-website-main" element={<ExternalRedirect to="/welcome/index.html" />} />
+        <Route path="/Parallax-website-main/*" element={<ExternalRedirect to="/welcome/index.html" />} />
         <Route path="/home" element={<LandingPage />} />
         <Route path="/auth/admin/login" element={<AdminLoginPage />} />
         <Route path="/auth/verify-signup" element={<VerifySignupPage />} />

@@ -1,13 +1,21 @@
 const INTRO_WORDMARK = 'IGNITER CLUB × GMIT';
 let parallaxInitialized = false;
 
+const updateScrollPosition = () => {
+    const top = window.scrollY || document.documentElement.scrollTop || 0;
+    document.documentElement.style.setProperty('--scrollTop', `${top}px`);
+    document.body.style.setProperty('--scrollTop', `${top}px`);
+};
+
+// Immediately initialize scroll position on script execution
+updateScrollPosition();
+
 const initParallax = () => {
     if (parallaxInitialized) return;
     parallaxInitialized = true;
 
-    window.addEventListener('scroll', e => {
-        document.body.style.cssText += `--scrollTop: ${this.scrollY}px`;
-    });
+    updateScrollPosition();
+    window.addEventListener('scroll', updateScrollPosition, { passive: true });
 
     gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
     ScrollSmoother.create({
